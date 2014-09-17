@@ -1,21 +1,13 @@
 #include <stdio.h>
 #include "memchunk.h"
 
+unsigned long NUM_CHUNKS = 5;
+
 int main()
 {
-    struct memchunk *chunkPtr;
-    struct memchunk firstChunk;
-    int numChunks;
+    struct memchunk chunks[NUM_CHUNKS];
 
-    firstChunk.start = 0;
-    firstChunk.length = 1;
-    firstChunk.RW = 0;
-
-    chunkPtr = &firstChunk;
-
-    numChunks = 1;
-
-    printf("thing %d\n", get_mem_layout(chunkPtr, numChunks));
+    printf("thing %d\n", get_mem_layout(chunks, NUM_CHUNKS));
 
     return 0;
 }
