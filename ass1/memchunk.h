@@ -6,6 +6,7 @@
  * Assignment 1
  */
 
+
 struct memchunk {
     void *start;
     unsigned long length;
@@ -13,3 +14,6 @@ struct memchunk {
 };
 
 int get_mem_layout(struct memchunk *chunk_list, int size);
+
+void read_err_handler(int sig);
+void write_err_handler(int sig);
