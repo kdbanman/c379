@@ -70,22 +70,21 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 
         /* All pages below MAX_ADDR have been checked if the current address
          * is within PAGE_SIZE of MAX_ADDR.  Consider the following, where 14
-         * addresses are checked (MAX_ADDR == 14) with PAGE_SIZE == 4:
+         * of 16 addresses are checked (MAX_ADDR == 13) with PAGE_SIZE == 4:
          *
          * Address numbers:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
          * Checked addresses: *  *  *  *  *  *  *  *  *  *  *  *  *  *
          * Page numbers:      1  1  1  1  2  2  2  2  3  3  3  3  4  4  4  4
          *
          * Page number 4 (addr 12) must checked, but assume the address counter
-         * (currAdd) will wrap back to zero after 13.  Then the following loop
-         * termination condition will never halt:
-         *     currAddr <= MAX_ADDR
+         * (currAdd) will wrap back to zero after 13.  Thus, the following loop
+         * will check all addresses, but never halt:
+         *     for (currAddr = 0; currAddr <= MAX_ADDR; currAddr += PAGE_SIZE){}
          *
-         * So, we need to check for the second-to-last page in the body of the
-         * loop, and perform the loop body one time afterwards
+         * So, we will terminate the loop after the second-to-last page is
+         * checked, then perform the loop body one time afterwards.
          */
-        //TODO change the loop structure to reflect above comment
-        for (; currAddr <= MAX_ADDR; currAddr += PAGE_SIZE)
+        for (; currAddr <= MAX_ADDR - PAGE_SIZE; currAddr += PAGE_SIZE)
         {
                 /* Set the jump point with the current stack */
                 int permission = setjmp(env);
@@ -111,6 +110,7 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
                                 break;
                 }
         }
+        //TODO: check last page explicitly
         
         return 0;
 }
