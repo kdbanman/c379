@@ -60,57 +60,65 @@ void write_err_handler(int sig)
         longjmp(env, READ); /* Only read access to address was possible */
 }
 
+int getPermission(unsigned long address)
+{
+        /* Set the jump point with the current stack */
+        int permission = setjmp(env);
+        /* Switch on values from error handlers for long jump. */
+        switch(permission)
+        {
+                case UNKNOWN: /* Page is not yet analyzed */
+                        /* Set segfault handler to read error handler */
+
+                        /* Try to read from current address */
+
+                        /* Set segfault handler to write error handler */
+
+                        /* Try to write to current address */
+
+                        /* If execution has reached here, the current page is
+                         * readable and writable */
+                        return 1;
+                case NOACC: /* Page is not accessible */
+                        return -1;
+                case READ: /* Page has read access but no write access */
+                        return 0;
+        }
+}
+
 int get_mem_layout(struct memchunk *chunk_list, int size)
 {
-        /* Declare and initialize constants */
-        const char * MAX_ADDR = (char *) 4294967295LU;
-        const int PAGE_SIZE = getpagesize();
-        
-        char * currAddr = (char *) 0;
-
-        /* All pages below MAX_ADDR have been checked if the current address
-         * is within PAGE_SIZE of MAX_ADDR.  Consider the following, where 14
-         * of 16 addresses are checked (MAX_ADDR == 13) with PAGE_SIZE == 4:
-         *
-         * Address numbers:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
-         * Checked addresses: *  *  *  *  *  *  *  *  *  *  *  *  *  *
-         * Page numbers:      1  1  1  1  2  2  2  2  3  3  3  3  4  4  4  4
-         *
-         * Page number 4 (addr 12) must checked, but assume the address counter
-         * (currAdd) will wrap back to zero after 13.  Thus, the following loop
-         * will check all addresses, but never halt:
-         *     for (currAddr = 0; currAddr <= MAX_ADDR; currAddr += PAGE_SIZE){}
-         *
-         * So, we will terminate the loop after the second-to-last page is
-         * checked, then perform the loop body one time afterwards.
-         */
-        for (; currAddr <= MAX_ADDR - PAGE_SIZE; currAddr += PAGE_SIZE)
+        /* Detect if 32 bit address space can be scanned - pointers must be 
+         * at least 4 bytes */
+        if (sizeof(char *) < 4)
         {
-                /* Set the jump point with the current stack */
-                int permission = setjmp(env);
-                /* Switch on values from error handlers for long jump. */
-                switch(permission)
-                {
-                        case UNKNOWN: /* Page is not yet analyzed */
-                                /* Set segfault handler to read error handler */
+                printf("WARNING: Cannot scan 32 bit memory space.\n");
+                int addrBits = 8 * sizeof(char *);
+                printf("         Only %d bits are addressable.\n", addrBits);
 
-                                /* Try to read from current address */
-
-                                /* Set segfault handler to write error handler */
-
-                                /* Try to write to current address */
-
-                                /* If execution has reached here, the current page is
-                                 * readable and writable */
-                                break;
-                        case NOACC: /* Page is not accessible */
-
-                                break;
-                        case READ: /* Page has read access but no write access */
-                                break;
-                }
+                return -1;
         }
-        //TODO: check last page explicitly
+
+        /* Declare and initialize variables */
+
+        /* Cast addresses from unsigned longs, because they are >= 32 bits in
+         * size according to spec.  Size mismatch between pointer and 
+         * unsigned long doesn't matter, since we only use the lowest 32 bits */
+        const unsigned long MAX_ADDR = 4294967295LU;
+        const unsigned long PAGE_SIZE = (unsigned long) getpagesize();
+        
+        unsigned long currAddr = 0LU;
+        unsigned long prevAddr = 0LU;
+
+        /* To account for the possibility of overflow after checking the final
+         * page, the loop terminates if the previous address is greater than 
+         * the current address.
+         */
+        for (; currAddr <= MAX_ADDR || prevAddr > currAddr;
+               currAddr += PAGE_SIZE)
+        {
+                int pagePermissions = getPermission(currAddr);
+        }
         
         return 0;
 }
