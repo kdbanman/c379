@@ -13,7 +13,7 @@ struct memchunk {
     int RW;
 };
 
+typedef enum { op_read, op_write } operation;
+
 int get_mem_layout(struct memchunk *chunk_list, int size);
 
-void read_err_handler(int sig);
-void write_err_handler(int sig);

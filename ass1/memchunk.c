@@ -37,9 +37,14 @@
  */
 
 #include <unistd.h>
+#include <signal.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
 #include "memchunk.h"
+
+#define DEBUG 2
 
 #define UNKNOWN 0
 #define NOACC 1
@@ -48,42 +53,104 @@
 /* Environment buffer for jump operations */
 jmp_buf env;
 
-/* Handler function intended for read-triggered segfaults */
-void read_err_handler(int sig)
+/* Tracker for attempted operations on memory */
+operation attempt;
+
+/* Provide debug level dependent print statements */
+void debug(int debugLevel, const char * format, ...)
 {
-        longjmp(env, NOACC); /* No access to address was possible */
+        if (DEBUG >= debugLevel)
+        {
+                va_list args;
+                va_start(args, format);
+                vprintf(format, args);
+                va_end(args);
+        }
 }
 
-/* Handler function intended for write-triggered segfaults */
-void write_err_handler(int sig)
+/* Handler function intended for read-triggered segfaults */
+void rw_err_handler(int sig)
 {
-        longjmp(env, READ); /* Only read access to address was possible */
+        if (attempt == op_read)
+        {
+                longjmp(env, NOACC); /* No access to address was possible */
+        }
+        else if (attempt == op_write)
+        {
+                longjmp(env, READ); /* Only read from address was possible */
+        }
+        else
+        {
+                /* TODO: more elegantly handle this. No printf here. */
+                printf("ERROR: Operation attempt could not be determined!\n");
+                exit(1);
+        }
 }
 
 int getPermission(unsigned long address)
 {
+        /* Set segfault error handler */
+        struct sigaction act;
+
+        act.sa_handler = rw_err_handler;
+        sigemptyset(&act.sa_mask);
+        act.sa_flags = 0;
+
+        //TODO; this is only registering once!!
+        sigaction(SIGSEGV, &act, 0);
+
         /* Set the jump point with the current stack */
         int permission = setjmp(env);
+
         /* Switch on values from error handlers for long jump. */
         switch(permission)
         {
                 case UNKNOWN: /* Page is not yet analyzed */
-                        /* Set segfault handler to read error handler */
+                        
+                        /* Read will be attempted to current address */
+                        attempt = op_read;
+
+                        //DEBUG
+                        printf("hhhhere\n");
+
 
                         /* Try to read from current address */
+                        char * loc = (char *) address;
+                        char locValue = *loc;
 
-                        /* Set segfault handler to write error handler */
+                        //DEBUG
+                        printf("here\n");
+
+
+                        /* Write will be attempted to current address */
+                        attempt = op_write;
 
                         /* Try to write to current address */
+                        *loc = 0;
+                        *loc = locValue;
 
                         /* If execution has reached here, the current page is
                          * readable and writable */
                         return 1;
-                case NOACC: /* Page is not accessible */
+                case NOACC:
+                        /* Page is not accessible */
+                        debug(2, "Read Denied.\n");
                         return -1;
-                case READ: /* Page has read access but no write access */
+                case READ:
+                        /* Page has read access but no write access */
+                        debug(2, "Write Denied.\n");
                         return 0;
         }
+        /* Execution should never reach here */
+        printf("ERROR: setjmp returned unexpected value!\n");
+        exit(1);
+}
+
+struct memchunk newChunk(unsigned long addr, unsigned long length, int access)
+{
+        /* Cast address to pointer, set permissions and initial size. */
+        struct memchunk new = {(void *) addr, length, access};
+        return new;
 }
 
 int get_mem_layout(struct memchunk *chunk_list, int size)
@@ -110,15 +177,44 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
         unsigned long currAddr = 0LU;
         unsigned long prevAddr = 0LU;
 
+        /* Track previous permissions to trigger memchunk creation.
+         * Initially invalid to trigger first memchunk creation.*/
+        struct memchunk currChunk;
+        int prevPermissions = -2;
+        int numChunks = 0;
+
         /* To account for the possibility of overflow after checking the final
          * page, the loop terminates if the previous address is greater than 
          * the current address.
          */
-        for (; currAddr <= MAX_ADDR || prevAddr > currAddr;
-               currAddr += PAGE_SIZE)
+        while (currAddr <= MAX_ADDR && prevAddr <= currAddr)
         {
-                int pagePermissions = getPermission(currAddr);
+                int pagePerm = getPermission(currAddr);
+
+                if (pagePerm == prevPermissions)
+                {
+                        /* New page is part of current chunk, so extend it. */
+                        currChunk.length += PAGE_SIZE;
+                } else {
+                        debug(1, "New RW=%d chunk @ %lu\n", pagePerm, currAddr);
+
+                        /* New page is beginning of a new chunk */
+                        currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
+                        numChunks++;
+
+                        /* Fill passed array if there is space */
+                        if (numChunks <= size)
+                        {
+                            debug(1, "Chunk inserted at %d\n", numChunks - 1);
+                            chunk_list[numChunks - 1] = currChunk;
+                        }
+                }
+
+                /* Maintain loop state. */
+                prevPermissions = pagePerm;
+                prevAddr = currAddr;
+                currAddr += PAGE_SIZE;
         }
         
-        return 0;
+        return numChunks;
 }
