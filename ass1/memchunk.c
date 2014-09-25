@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include "memchunk.h"
 
-#define DEBUG 2
+#define DEBUG 0
 
 #define UNKNOWN 0
 #define NOACC 1
@@ -73,16 +73,16 @@ void rw_err_handler(int sig)
 {
         if (attempt == op_read)
         {
-                longjmp(env, NOACC); /* No access to address was possible */
+                siglongjmp(env, NOACC); /* No access to address was possible */
         }
         else if (attempt == op_write)
         {
-                longjmp(env, READ); /* Only read from address was possible */
+                siglongjmp(env, READ); /* Only read from address was possible */
         }
         else
         {
-                /* TODO: more elegantly handle this. No printf here. */
-                printf("ERROR: Operation attempt could not be determined!\n");
+                /* Exit silently, because printf in signal handlers can cause
+                 * unspecified behaviour */
                 exit(1);
         }
 }
@@ -96,11 +96,10 @@ int getPermission(unsigned long address)
         sigemptyset(&act.sa_mask);
         act.sa_flags = 0;
 
-        //TODO; this is only registering once!!
         sigaction(SIGSEGV, &act, 0);
 
-        /* Set the jump point with the current stack */
-        int permission = setjmp(env);
+        /* Set the jump point with the current stack and reregister handler */
+        int permission = sigsetjmp(env, 1);
 
         /* Switch on values from error handlers for long jump. */
         switch(permission)
@@ -110,17 +109,9 @@ int getPermission(unsigned long address)
                         /* Read will be attempted to current address */
                         attempt = op_read;
 
-                        //DEBUG
-                        printf("hhhhere\n");
-
-
                         /* Try to read from current address */
                         char * loc = (char *) address;
                         char locValue = *loc;
-
-                        //DEBUG
-                        printf("here\n");
-
 
                         /* Write will be attempted to current address */
                         attempt = op_write;
