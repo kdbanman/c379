@@ -168,10 +168,12 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
         unsigned long currAddr = 0LU;
         unsigned long prevAddr = 0LU;
 
-        /* Track previous permissions to trigger memchunk creation.
-         * Initially invalid to trigger first memchunk creation.*/
-        struct memchunk currChunk;
-        int prevPermissions = -2;
+        /* Track previous permissions to trigger memchunk creation. */
+        int currPerm = getPermission(currAddr);
+
+        /* Initialize first memchunk. */
+        struct memchunk currChunk = newChunk(currAddr, PAGE_SIZE, currPerm);
+
         int numChunks = 0;
 
         /* To account for the possibility of overflow after checking the final
@@ -182,15 +184,13 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
         {
                 int pagePerm = getPermission(currAddr);
 
-                if (pagePerm == prevPermissions)
+                if (pagePerm == currPerm)
                 {
                         /* New page is part of current chunk, so extend it. */
                         currChunk.length += PAGE_SIZE;
                 } else {
                         debug(1, "New RW=%d chunk @ %lu\n", pagePerm, currAddr);
 
-                        /* New page is beginning of a new chunk */
-                        currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
                         numChunks++;
 
                         /* Fill passed array if there is space */
@@ -199,10 +199,13 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
                             debug(1, "Chunk inserted at %d\n", numChunks - 1);
                             chunk_list[numChunks - 1] = currChunk;
                         }
+                        
+                        /* Current page address is beginning of a new chunk */
+                        currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
                 }
 
                 /* Maintain loop state. */
-                prevPermissions = pagePerm;
+                currPerm = pagePerm;
                 prevAddr = currAddr;
                 currAddr += PAGE_SIZE;
         }
