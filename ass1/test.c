@@ -1,30 +1,64 @@
+/*
+ * Kirby Banman
+ * 1173895
+ *
+ * CMPUT 379 EA1
+ * Assignment 1
+ *
+ */
+
 #include <stdio.h>
+#include <stdlib.h>
 #include "memchunk.h"
 
-#define NUM_CHUNKS 22
-
-int main()
+void printUsage(char * name)
 {
-        struct memchunk chunks[NUM_CHUNKS];
+	printf("Usage:\n");
+	printf("  %s <integer, at least 1>\n", name);
+}
 
-        printf("%d chunks total.\n", get_mem_layout(chunks, NUM_CHUNKS));
-        printf("%d chunks recorded:\n", NUM_CHUNKS);
+int main(int argc, char **argv)
+{
+	
+	int converted = -1;
+	if (argc != 2)
+	{
+		printUsage(argv[0]);
+		return 1;
+	}
+	else
+	{
+		converted = atoi(argv[1]);
+		if (converted <= 0)
+		{
+			printUsage(argv[0]);
+			return 1;
+		}
+	}
 
-        printf("----------------------------------------------------\n");
-        printf("| Chunk |          Start |         Length |     RW |\n");
-        printf("----------------------------------------------------\n");
+	const int NUM_CHUNKS = converted;
 
-        int i;
-        for (i = 0; i < NUM_CHUNKS; i++)
-        {
-                void * start = chunks[i].start;
-                unsigned long length = chunks[i].length;
-                int RW = chunks[i].RW;
+	struct memchunk chunks[NUM_CHUNKS];
 
-                printf("| %5d | %14p | %14lu | %6d |\n", i, start, length, RW);
-        }
+	printf("%d array positions to fill.\n", NUM_CHUNKS);
+	printf("%d chunks found.\n", get_mem_layout(chunks, NUM_CHUNKS));
+	printf("Array content:\n");
 
-        printf("----------------------------------------------------\n");
-        
-        return 0;
+	printf("----------------------------------------------------\n");
+	printf("| Chunk |          Start |         Length |     RW |\n");
+	printf("----------------------------------------------------\n");
+
+	int i;
+	for (i = 0; i < NUM_CHUNKS; i++)
+	{
+		void * start = chunks[i].start;
+		unsigned long length = chunks[i].length;
+		int RW = chunks[i].RW;
+
+		printf("| %5d | %14p | %14lu | %6d |\n", i, start, length, RW);
+	}
+
+	printf("----------------------------------------------------\n");
+	
+	return 0;
 }

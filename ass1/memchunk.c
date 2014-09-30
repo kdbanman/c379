@@ -59,156 +59,170 @@ operation attempt;
 /* Provide debug level dependent print statements */
 void debug(int debugLevel, const char * format, ...)
 {
-        if (DEBUG >= debugLevel)
-        {
-                va_list args;
-                va_start(args, format);
-                vprintf(format, args);
-                va_end(args);
-        }
+	if (DEBUG >= debugLevel)
+	{
+		va_list args;
+		va_start(args, format);
+		vprintf(format, args);
+		va_end(args);
+	}
 }
 
 /* Handler function intended for read-triggered segfaults */
 void rw_err_handler(int sig)
 {
-        if (attempt == op_read)
-        {
-                siglongjmp(env, NOACC); /* No access to address was possible */
-        }
-        else if (attempt == op_write)
-        {
-                siglongjmp(env, READ); /* Only read from address was possible */
-        }
-        else
-        {
-                /* Exit silently, because printf in signal handlers can cause
-                 * unspecified behaviour */
-                exit(1);
-        }
+	(void) sig; /* Silence unused parameter warning. */
+
+	if (attempt == op_read)
+	{
+		siglongjmp(env, NOACC); /* No access to address was possible */
+	}
+	else if (attempt == op_write)
+	{
+		siglongjmp(env, READ); /* Only read from address was possible */
+	}
+	else
+	{
+		/* Exit silently, because printf in signal handlers can cause
+		 * unspecified behaviour */
+		exit(1);
+	}
 }
 
 int getPermission(unsigned long address)
 {
-        /* Set segfault error handler */
-        struct sigaction act;
+	/* Set segfault error handler */
+	struct sigaction act;
 
-        act.sa_handler = rw_err_handler;
-        sigemptyset(&act.sa_mask);
-        act.sa_flags = 0;
+	act.sa_handler = rw_err_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
 
-        sigaction(SIGSEGV, &act, 0);
+	sigaction(SIGSEGV, &act, 0);
 
-        /* Set the jump point with the current stack and reregister handler */
-        int permission = sigsetjmp(env, 1);
+	int permission = sigsetjmp(env, 1);
 
-        /* Switch on values from error handlers for long jump. */
-        switch(permission)
-        {
-                case UNKNOWN: /* Page is not yet analyzed */
-                        
-                        /* Read will be attempted to current address */
-                        attempt = op_read;
+	/* Switch on values from error handlers for long jump. */
+	switch(permission)
+	{
+		case UNKNOWN: /* Page is not yet analyzed */
+			
+			/* Read will be attempted to current address */
+			attempt = op_read;
 
-                        /* Try to read from current address */
-                        char * loc = (char *) address;
-                        char locValue = *loc;
+			/* Try to read from current address */
+			char * loc = (char *) address;
+			char locValue = *loc;
 
-                        /* Write will be attempted to current address */
-                        attempt = op_write;
+			/* Write will be attempted to current address */
+			attempt = op_write;
 
-                        /* Try to write to current address */
-                        *loc = 0;
-                        *loc = locValue;
+			/* Try to write to current address */
+			*loc = 0;
+			*loc = locValue;
 
-                        /* If execution has reached here, the current page is
-                         * readable and writable */
-                        return 1;
-                case NOACC:
-                        /* Page is not accessible */
-                        debug(2, "Read Denied.\n");
-                        return -1;
-                case READ:
-                        /* Page has read access but no write access */
-                        debug(2, "Write Denied.\n");
-                        return 0;
-        }
-        /* Execution should never reach here */
-        printf("ERROR: setjmp returned unexpected value!\n");
-        exit(1);
+			/* If execution has reached here, the current page is
+			 * readable and writable */
+			return 1;
+		case NOACC:
+			/* Page is not accessible */
+			debug(2, "Read Denied.\n");
+			return -1;
+		case READ:
+			/* Page has read access but no write access */
+			debug(2, "Write Denied.\n");
+			return 0;
+	}
+	/* Execution should never reach here */
+	printf("ERROR: setjmp returned unexpected value!\n");
+	exit(1);
 }
 
 struct memchunk newChunk(unsigned long addr, unsigned long length, int access)
 {
-        /* Cast address to pointer, set permissions and initial size. */
-        struct memchunk new = {(void *) addr, length, access};
-        return new;
+	/* Cast address to pointer, set permissions and initial size. */
+	struct memchunk new = {(void *) addr, length, access};
+	return new;
+}
+
+void clearRemaining(struct memchunk *chunk_list, int size, int numChunks)
+{
+	/* If there are more array positions than there are chunks, set them
+	 * to consistent, invalid values to avoid confusion. */
+	while (numChunks < size)
+	{
+		numChunks++;
+		chunk_list[numChunks - 1] = newChunk(0, 0, -2);
+	}
 }
 
 int get_mem_layout(struct memchunk *chunk_list, int size)
 {
-        /* Detect if 32 bit address space can be scanned - pointers must be 
-         * at least 4 bytes */
-        if (sizeof(char *) < 4)
-        {
-                printf("WARNING: Cannot scan 32 bit memory space.\n");
-                int addrBits = 8 * sizeof(char *);
-                printf("         Only %d bits are addressable.\n", addrBits);
+	/* Detect if 32 bit address space can be scanned - pointers must be 
+	 * at least 4 bytes */
+	if (sizeof(char *) < 4)
+	{
+		printf("WARNING: Cannot scan 32 bit memory space.\n");
+		int addrBits = 8 * sizeof(char *);
+		printf("         Only %d bits are addressable.\n", addrBits);
 
-                return -1;
-        }
+		return -1;
+	}
 
-        /* Declare and initialize variables */
+	/* Declare and initialize variables */
 
-        /* Cast addresses from unsigned longs, because they are >= 32 bits in
-         * size according to spec.  Size mismatch between pointer and 
-         * unsigned long doesn't matter, since we only use the lowest 32 bits */
-        const unsigned long MAX_ADDR = 4294967295LU;
-        const unsigned long PAGE_SIZE = (unsigned long) getpagesize();
-        
-        unsigned long currAddr = 0LU;
-        unsigned long prevAddr = 0LU;
+	/* Cast addresses from unsigned longs, because they are >= 32 bits in
+	 * size according to spec.  Size mismatch between pointer and 
+	 * unsigned long doesn't matter, since we only use the lowest 32 bits */
+	const unsigned long MAX_ADDR = 4294967295LU;
+	const unsigned long PAGE_SIZE = (unsigned long) getpagesize();
+	
+	unsigned long currAddr = 0LU;
+	unsigned long prevAddr = 0LU;
 
-        /* Track previous permissions to trigger memchunk creation. */
-        int currPerm = getPermission(currAddr);
+	/* Track previous permissions to trigger memchunk creation. */
+	int currPerm = getPermission(currAddr);
 
-        /* Initialize first memchunk. */
-        struct memchunk currChunk = newChunk(currAddr, PAGE_SIZE, currPerm);
+	/* Initialize first memchunk. */
+	struct memchunk currChunk = newChunk(currAddr, PAGE_SIZE, currPerm);
 
-        int numChunks = 0;
+	int numChunks = 0;
 
-        /* To account for the possibility of overflow after checking the final
-         * page, the loop terminates if the previous address is greater than 
-         * the current address.
-         */
-        while (currAddr <= MAX_ADDR && prevAddr <= currAddr)
-        {
-                int pagePerm = getPermission(currAddr);
+	/* To account for the possibility of overflow after checking the final
+	 * page, the loop terminates if the previous address is greater than 
+	 * the current address.
+	 */
+	while (currAddr <= MAX_ADDR && prevAddr <= currAddr)
+	{
+		int pagePerm = getPermission(currAddr);
 
-                if (pagePerm == currPerm)
-                {
-                        /* New page is part of current chunk, so extend it. */
-                        currChunk.length += PAGE_SIZE;
-                } else {
-                        debug(1, "New RW=%d chunk @ %lu\n", pagePerm, currAddr);
+		if (pagePerm == currPerm)
+		{
+			/* New page is part of current chunk, so extend it. */
+			currChunk.length += PAGE_SIZE;
+		} else {
+			debug(1, "New RW=%d chunk @ %lu\n", pagePerm, currAddr);
 
-                        numChunks++;
+			numChunks++;
 
-                        /* Fill passed array if there is space */
-                        if (numChunks <= size)
-                        {
-                            debug(1, "Chunk inserted at %d\n", numChunks - 1);
-                            chunk_list[numChunks - 1] = currChunk;
-                        }
-                        
-                        /* Current page address is beginning of a new chunk */
-                        currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
-                }
+			/* Fill passed array if there is space */
+			if (numChunks <= size)
+			{
+			    debug(1, "Chunk inserted at %d\n", numChunks - 1);
+			    chunk_list[numChunks - 1] = currChunk;
+			}
+			
+			/* Current page address is beginning of a new chunk */
+			currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
+		}
 
-                /* Maintain loop state. */
-                currPerm = pagePerm;
-                prevAddr = currAddr;
-                currAddr += PAGE_SIZE;
-        }
-        
-        return numChunks;
+		/* Maintain loop state. */
+		currPerm = pagePerm;
+		prevAddr = currAddr;
+		currAddr += PAGE_SIZE;
+	}
+
+	clearRemaining(chunk_list, size, numChunks);
+	
+	return numChunks;
 }
