@@ -10,13 +10,12 @@
 /*
  * Assumptions and notes:
  *
- * - getPageSize() is constant across all execution time of process
+ * - getPageSize() is constant across entire execution of process
  * - memchunk.length will always be >= getPageSize()
  * - memchunk.length will always be == 0 in (mod getPageSize())
- * - no contiguous memchunks in the return array have the same RW
- * - there may be more addresses than 2^32
- * - page size may not divide 2^32 evenly
- * - iterating to 2^32 requires a 64 bit counter, but that cannot be
+ * - no contiguous memchunks in the return array can have the same RW
+ * - there may be more addresses than 2^32, but they need not be assessed
+ * - page size need not divide 2^32 with zero remainder
  *   cast to a pointer
  */
 
@@ -26,10 +25,10 @@
  * Set a pointer to the first address of each page in the address space.
  * For each of those addresses, try accessing, then reading, then
  * writing.
+ * Record what is being attempted in a global variable.
  * If a segfault is intercepted, record the permission level.
  * If the permission level is different from the previos one, then a new
- * chunk
- * has been found at the current page:
+ * chunk has been found at the current page:
  *     - Set the final length of the current chunk
  *     - Move to the next chunk
  * Otherwise, the page is part of the current chunk.
@@ -71,19 +70,24 @@ void debug(int debugLevel, const char * format, ...)
 /* Handler function intended for read-triggered segfaults */
 void rw_err_handler(int sig)
 {
-	(void) sig; /* Silence unused parameter warning. */
+	/* Silence unused parameter warning. */
+	(void) sig;
 
 	if (attempt == op_read)
 	{
-		siglongjmp(env, NOACC); /* No access to address was possible */
+		/* Read was attempted, so no access to this address is 
+                 * possible. */
+		siglongjmp(env, NOACC);
 	}
 	else if (attempt == op_write)
 	{
-		siglongjmp(env, READ); /* Only read from address was possible */
+		/* Write was attempted after read, so only reading from
+                 * this address is possible. */
+		siglongjmp(env, READ);
 	}
 	else
 	{
-		/* Exit silently, because printf in signal handlers can cause
+		/* Exit silently, because printf calls in signal handlers is
 		 * unspecified behaviour */
 		exit(1);
 	}
@@ -174,7 +178,7 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 	/* Cast addresses from unsigned longs, because they are >= 32 bits in
 	 * size according to spec.  Size mismatch between pointer and 
 	 * unsigned long doesn't matter, since we only use the lowest 32 bits */
-	const unsigned long MAX_ADDR = 4294967295LU;
+	const unsigned long MAX_ADDR = 0xFFFFFFFFLU;;
 	const unsigned long PAGE_SIZE = (unsigned long) getpagesize();
 	
 	unsigned long currAddr = 0LU;
