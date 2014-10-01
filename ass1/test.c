@@ -49,6 +49,7 @@ int main(int argc, char **argv)
 	printf("----------------------------------------------------\n");
 
 	int i;
+        unsigned long totalLength = 0;
 	for (i = 0; i < NUM_CHUNKS; i++)
 	{
 		void * start = chunks[i].start;
@@ -56,9 +57,13 @@ int main(int argc, char **argv)
 		int RW = chunks[i].RW;
 
 		printf("| %5d | %14p | %14lu | %6d |\n", i, start, length, RW);
+
+                totalLength += length;
 	}
 
 	printf("----------------------------------------------------\n");
+
+	printf("Total length recorded in array: %lu bytes\n", totalLength);
 	
 	return 0;
 }

@@ -44,7 +44,7 @@
 #include <stdlib.h>
 #include "memchunk.h"
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define UNKNOWN 0
 #define NOACC 1
@@ -180,7 +180,7 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 	unsigned long currAddr = 0LU;
 	unsigned long prevAddr = 0LU;
 
-	/* Track previous permissions to trigger memchunk creation. */
+	/* Track currrent permissions to trigger memchunk creation. */
 	int currPerm = getPermission(currAddr);
 
 	/* Initialize first memchunk. */
@@ -221,6 +221,8 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 		prevAddr = currAddr;
 		currAddr += PAGE_SIZE;
 	}
+
+        debug(1, "Final address checked: %lu\n", prevAddr);
 
 	clearRemaining(chunk_list, size, numChunks);
 	
