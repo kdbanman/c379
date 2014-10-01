@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 	printf("----------------------------------------------------\n");
 
 	int i;
-        unsigned long totalLength = 0;
+        unsigned long long totalLength = 0;
 	for (i = 0; i < NUM_CHUNKS; i++)
 	{
 		void * start = chunks[i].start;
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
 	printf("----------------------------------------------------\n");
 
-	printf("Total length recorded in array: %lu bytes\n", totalLength);
+	printf("Total length recorded in array: %llu bytes\n", totalLength);
 	
 	return 0;
 }

@@ -28,4 +28,10 @@ int getPermission(unsigned long address);
 
 struct memchunk newChunk(unsigned long addr, unsigned long length, int access);
 
+int insertChunk(int chunkNum,
+                struct memchunk chunk,
+                unsigned long rightBound,
+                struct memchunk *chunk_list,
+                int size);
+
 void clearRemaining(struct memchunk *chunk_list, int size, int numChunks);

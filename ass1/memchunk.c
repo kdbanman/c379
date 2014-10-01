@@ -43,7 +43,7 @@
 #include <stdlib.h>
 #include "memchunk.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define UNKNOWN 0
 #define NOACC 1
@@ -160,6 +160,29 @@ void clearRemaining(struct memchunk *chunk_list, int size, int numChunks)
 	}
 }
 
+int insertChunk(int chunkNum,
+                struct memchunk chunk,
+                unsigned long rightBound,
+                struct memchunk *chunk_list,
+                int size)
+{
+        /* Calculate and set chunk length. */
+        chunk.length = rightBound - (unsigned long) chunk.start;
+
+        /* Fill passed array if there is space */
+        if (chunkNum <= size)
+        {
+            debug(1, "Chunk inserted at array index %d\n",
+                  chunkNum - 1);
+            chunk_list[chunkNum - 1] = chunk;
+
+            return 0;
+        }
+
+        /* Array is already full. */
+        return 1;
+}
+
 int get_mem_layout(struct memchunk *chunk_list, int size)
 {
 	/* Detect if 32 bit address space can be scanned - pointers must be 
@@ -187,10 +210,12 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 	/* Track currrent permissions to trigger memchunk creation. */
 	int currPerm = getPermission(currAddr);
 
-	/* Initialize first memchunk. */
-	struct memchunk currChunk = newChunk(currAddr, PAGE_SIZE, currPerm);
+	/* Initialize first memchunk, length unknown. */
+	struct memchunk currChunk = newChunk(currAddr, -1, currPerm);
 
 	int numChunks = 0;
+
+        printf("Mapping address space...\n");
 
 	/* To account for the possibility of overflow after checking the final
 	 * page, the loop terminates if the previous address is greater than 
@@ -200,24 +225,22 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 	{
 		int pagePerm = getPermission(currAddr);
 
-		if (pagePerm == currPerm)
+		if (pagePerm != currPerm)
 		{
-			/* New page is part of current chunk, so extend it. */
-			currChunk.length += PAGE_SIZE;
-		} else {
 			debug(1, "New RW=%d chunk @ %lu\n", pagePerm, currAddr);
 
 			numChunks++;
 
-			/* Fill passed array if there is space */
-			if (numChunks <= size)
-			{
-			    debug(1, "Chunk inserted at %d\n", numChunks - 1);
-			    chunk_list[numChunks - 1] = currChunk;
-			}
+                        /* Insert current chunk into array before replacing
+                         * it with a new one. */
+                        insertChunk(numChunks,
+                                        currChunk,
+                                        currAddr,
+                                        chunk_list,
+                                        size);
 			
 			/* Current page address is beginning of a new chunk */
-			currChunk = newChunk(currAddr, PAGE_SIZE, pagePerm);
+			currChunk = newChunk(currAddr, -1, pagePerm);
 		}
 
 		/* Maintain loop state. */
@@ -226,6 +249,19 @@ int get_mem_layout(struct memchunk *chunk_list, int size)
 		currAddr += PAGE_SIZE;
 	}
 
+        /* Increment for final chunk. */
+        numChunks++;
+
+        debug(1, "Address mapping complete.\n");
+
+        /* Insert final chunk into array. */
+        insertChunk(numChunks,
+                        currChunk,
+                        currAddr,
+                        chunk_list,
+                        size);
+
+        debug(1, "Final permission level: %d\n", currPerm);
         debug(1, "Final address checked: %lu\n", prevAddr);
 
 	clearRemaining(chunk_list, size, numChunks);
