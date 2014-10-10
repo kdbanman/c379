@@ -1,0 +1,1 @@
+- is there a single file write sync architecture I can use for fork() and pthreads?
