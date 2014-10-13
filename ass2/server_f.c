@@ -8,45 +8,17 @@
  *
  */
 
-//TODO: fix includes
-#include <sys/socket.h>
-#include <unistd.h>
-
-#define LISTEN_PORT 8080
+#include <stdio.h>
+#include "server_util.h"
+#include "server_f.h"
 
 int main(int argc, char *argv[])
 {
-        int listenSocket, clientSocket, clientAddrLen;
+        struct serverconf config;
 
-        char * receivedData;
+        config = getConfig(argc, argv);
 
-        struct sockaddr_in myAddr, clientAddr;
-
-        listenSocket = socket(AF_INET, SOCK_STREAM, 0);
-        if (sock < 0)
-        {
-                perror("Sever: could not open listener socket.\n");
-                exit(1);
-        }
-
-        myAddr.sin_family = AF_INET;
-        myAddr.sin_port = htons(LISTEN_PORT);
-
-        listen(listenSocket, 3);
-
-        clientAddrLen = sizeof clientAddr;
-        while (1)
-        {
-                clientSocket = accept(listenSocket,
-                                      (struct sockaddr *) & clientAddr,
-                                      & clientAddrLen);
-                if (clientSocket < 0)
-                {
-                        perror("Sever: could not accept client socket.\n");
-                        exit(1);
-                }
-                
-        }
+        printf("%d %s %s\n", config.port, config.basedir, config.logloc);
 
         return 0;
 }
