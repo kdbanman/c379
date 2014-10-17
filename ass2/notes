@@ -34,8 +34,6 @@ Notes:
 
 - how do i daemonize within my code?
 
-- i should probably objectify things into "config" "logging" "server_util".
-
 - are there necessary cleanup steps for threads or processes?
 
 - is there a single file write sync architecture I can use for fork() and pthreads?

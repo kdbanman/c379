@@ -9,12 +9,14 @@
  */
 
 #include <stdio.h>
+#include "server_conf.h"
 #include "server_util.h"
+#include "log_monitor.h"
 #include "server_f.h"
 
 int main(int argc, char *argv[])
 {
-        struct serverconf config;
+        serverconf config;
 
         config = getConfig(argc, argv);
 
