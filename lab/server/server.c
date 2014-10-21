@@ -48,6 +48,7 @@ static void usage()
 
 static void kidhandler(int signum) {
 	/* signal handler for SIGCHLD */
+        printf("here\n");
 	waitpid(WAIT_ANY, NULL, WNOHANG);
 }
 
@@ -103,7 +104,7 @@ int main(int argc,  char *argv[])
 	if (bind(sd, (struct sockaddr *) &sockname, sizeof(sockname)) == -1)
 		err(1, "bind failed");
 
-	if (listen(sd,3) == -1)
+	if (listen(sd,127) == -1)
 		err(1, "listen failed");
 
 	/*
@@ -118,12 +119,13 @@ int main(int argc,  char *argv[])
 	 * zombies around when they die - we can do this by catching
 	 * SIGCHLD.
 	 */
-	sa.sa_handler = kidhandler;
+	sa.sa_handler = SIG_IGN;
         sigemptyset(&sa.sa_mask);
 	/*
 	 * we want to allow system calls like accept to be restarted if they
 	 * get interrupted by a SIGCHLD
 	 */
+        //sa.sa_flags = SA_RESTART;
         sa.sa_flags = SA_RESTART;
         if (sigaction(SIGCHLD, &sa, NULL) == -1)
                 err(1, "sigaction failed");
@@ -149,6 +151,8 @@ int main(int argc,  char *argv[])
 		     err(1, "fork failed");
 
 		if(pid == 0) {
+                        printf("something write words\n");
+
 			ssize_t written, w;
 			/*
 			 * write the message to the client, being sure to
