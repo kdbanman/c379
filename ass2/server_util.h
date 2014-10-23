@@ -26,6 +26,11 @@ typedef struct request {
 
 /*
  * Returns a string of the time current when called formatted as:
- *  Www Mmm dd hh:mm:ss yyy
+ *          Www Mmm dd hh:mm:ss yyy
  */
 char * currtime();
+
+/*
+ * Validates string against HTTP 1.1 GET and populates a request struct.
+ */
+request parseGet(char * req);
