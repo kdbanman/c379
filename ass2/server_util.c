@@ -8,3 +8,9 @@
  *
  */
 
+char * currtime()
+{
+        time_t curr;
+        time(&curr);
+        return asctime(gmtime(&curr));
+}
