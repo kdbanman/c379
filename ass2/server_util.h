@@ -8,3 +8,8 @@
  *
  */
 
+typedef struct request {
+        char * address;
+        char * timestring;
+        char * path;
+} request;
