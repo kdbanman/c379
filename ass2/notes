@@ -29,12 +29,22 @@ Client Handler:
 6. Frees malloced string
 7. Closes socket
 
+Assumptions:
+
+- HTTP requests are valid if prepended by any amount of newlines
+    see: http://tools.ietf.org/html/rfc2616#section-4
+
+
+
 
 Notes:
 
-- how do i daemonize within my code?
+
 
 - are there necessary cleanup steps for threads or processes?
+
+- how do i daemonize within my code?
+    with daemonize()
 
 - is there a single file write sync architecture I can use for fork() and pthreads?
     yep. mutex.  note special initialization process for fork() mutexing at
