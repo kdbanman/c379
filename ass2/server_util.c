@@ -24,7 +24,7 @@ char * currtime()
 char * getResourcePath(char * req)
 {
         /*
-         * Regex spec notes by multiline string line number:
+         * Regex spec notes by string line number:
          * 2. GET may be preceded by [CR]LF.
          * 3. Second subexpression \\([^[:space:]]*\\) is the resource path.
          * 4. Any number of headers are allowed.
@@ -49,6 +49,7 @@ char * getResourcePath(char * req)
         regmatch_t matches[3];
 
         char * reqpath;
+        size_t pathsize;
 
         /* Compile regular expression */
         reti = regcomp(&regex, spec, 0);
@@ -64,8 +65,11 @@ char * getResourcePath(char * req)
             
                 /* Match was found, construct the path string from the 3rd
                  * entry of the matches array. */
-                /*TODO reqpath= strcpy req matches[2].rm_so, matches[2].rm_eo */
-                reqpath = "";
+                //TODO this is wrong.  allocate reqpath as char array size of something bigger, then set contents as below
+                pathsize = matches[2].rm_eo - matches[2].rm_so;
+                reqpath = char[pathsize + 1];
+                memcpy(reqpath, &req[matches[2].rm_so], pathsize);
+                reqpath[pathsize] = '\0';
         }
         else if (reti == REG_NOMATCH) {
                 /* Match was not found, so the request is invalid. */
