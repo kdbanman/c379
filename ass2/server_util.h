@@ -8,6 +8,8 @@
  *
  */
 
+#include <netinet/in.h>
+
 /*
  * Client request struct, to be returned by initial GET parse.
  * - address set according to socket api.
@@ -31,10 +33,11 @@ typedef struct request {
 char * currtime();
 
 /*
+ * MEMORY: Return string is malloced, so free it when done.
+ *
  * Tests adherence of request string to HTTP GET spec.
  * If request is valid HTTP GET, return requested resource (path) string.
  * If request is not valid, return NULL.
- * Return string is malloced, so free it when done.
  */
 char * getResourcePath(char * req);
 
@@ -42,4 +45,4 @@ char * getResourcePath(char * req);
  * Validates string against HTTP 1.1 GET and populates a request struct.
  * 
  */
-request parseGet(char * req, char * address);
+request parseGet(char * req, struct sockaddr_in address);

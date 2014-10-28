@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <netinet/in.h>
 #include "server_util.h"
 
 char * currtime()
@@ -66,7 +67,6 @@ char * getResourcePath(char * req)
             
                 /* Match was found, construct the path string from the 3rd
                  * entry of the matches array. */
-                //TODO this is wrong.  allocate reqpath as char array size of something bigger, then set contents as below
                 pathsize = matches[2].rm_eo - matches[2].rm_so;
                 reqpath = (char *) malloc((pathsize + 1) * sizeof(char));
                 memcpy(reqpath, &req[matches[2].rm_so], pathsize);
@@ -89,7 +89,7 @@ char * getResourcePath(char * req)
         return reqpath;
 }
 
-request parseGet(char * req, char * address)
+request parseGet(char * req, struct sockaddr_in address)
 {
  /*
   * Since HTTP GET is assumed, request line is constructed from resource
