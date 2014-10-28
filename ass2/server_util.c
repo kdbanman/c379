@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "server_util.h"
 
 char * currtime()
 {
@@ -67,7 +68,7 @@ char * getResourcePath(char * req)
                  * entry of the matches array. */
                 //TODO this is wrong.  allocate reqpath as char array size of something bigger, then set contents as below
                 pathsize = matches[2].rm_eo - matches[2].rm_so;
-                reqpath = char[pathsize + 1];
+                reqpath = (char *) malloc((pathsize + 1) * sizeof(char));
                 memcpy(reqpath, &req[matches[2].rm_so], pathsize);
                 reqpath[pathsize] = '\0';
         }

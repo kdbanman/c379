@@ -34,6 +34,7 @@ char * currtime();
  * Tests adherence of request string to HTTP GET spec.
  * If request is valid HTTP GET, return requested resource (path) string.
  * If request is not valid, return NULL.
+ * Return string is malloced, so free it when done.
  */
 char * getResourcePath(char * req);
 
