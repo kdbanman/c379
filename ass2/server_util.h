@@ -31,6 +31,14 @@ typedef struct request {
 char * currtime();
 
 /*
- * Validates string against HTTP 1.1 GET and populates a request struct.
+ * Tests adherence of request string to HTTP GET spec.
+ * If request is valid HTTP GET, return requested resource (path) string.
+ * If request is not valid, return NULL.
  */
-request parseGet(char * req);
+char * getResourcePath(char * req);
+
+/*
+ * Validates string against HTTP 1.1 GET and populates a request struct.
+ * 
+ */
+request parseGet(char * req, char * address);

@@ -9,7 +9,10 @@
  */
 
 #include <time.h>
+#include <regex.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 char * currtime()
 {
@@ -18,11 +21,73 @@ char * currtime()
         return asctime(gmtime(&curr));
 }
 
-char * 
-
-request parseGet(char * req)
+char * getResourcePath(char * req)
 {
-        /* Get request line boundaries */
-        /* Ensure request line is "GET <path> HTTP/1.1" */
-        /* wut */
+        /*
+         * Regex spec notes by multiline string line number:
+         * 2. GET may be preceded by [CR]LF.
+         * 3. Second subexpression \\([^[:space:]]*\\) is the resource path.
+         * 4. Any number of headers are allowed.
+         * 4. Line is header iff it is a colon separated pair of keyval
+         *    strings followed by [CR]LF
+         * 4. keyval strings contain no control characters (x01-x1f)
+         * 4. This liberal definition passes the string ":\n" as a header
+         *    due to the colon and the newline.
+         */
+        char * spec = "^"
+                      "\\(\r\\{0,1\\}\n\\)*"
+                      "GET \\([^[:space:]]*\\) HTTP/1\\.1\r\\{0,1\\}\n"
+                      "\\([^[:cntrl:]]*:[^[:cntrl:]]*\r\\{0,1\\}\n\\)*"
+                      "\\(\r\\{0,1\\}\n\\)\\{1,\\}"
+                      "$";
+
+        /* Initialize regex. */
+        regex_t regex;
+        int reti;
+        char msgbuf[100];
+
+        regmatch_t matches[3];
+
+        char * reqpath;
+
+        /* Compile regular expression */
+        reti = regcomp(&regex, spec, 0);
+        if (reti) {
+                regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+                fprintf(stderr, "Could not compile regex: %s\n", msgbuf);
+                exit(1);
+        }
+
+        /* Execute regular expression */
+        reti = regexec(&regex, req, 3, matches, 0);
+        if (!reti) {
+            
+                /* Match was found, construct the path string from the 3rd
+                 * entry of the matches array. */
+                /*TODO reqpath= strcpy req matches[2].rm_so, matches[2].rm_eo */
+                reqpath = "";
+        }
+        else if (reti == REG_NOMATCH) {
+                /* Match was not found, so the request is invalid. */
+                reqpath = NULL;
+        }
+        else {
+                /* Regex library experienced unexpected failure. */
+                regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+                fprintf(stderr, "Regexlibrary unexpected failure.\n");
+                fprintf(stderr, "Regex match failed: %s\n", msgbuf);
+        }
+
+        /* Free compiled regular expression. */
+        regfree(&regex);
+
+        return reqpath;
+}
+
+request parseGet(char * req, char * address)
+{
+ /*
+  * Since HTTP GET is assumed, request line is constructed from resource
+  * path.
+  */
 }
