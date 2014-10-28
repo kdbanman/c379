@@ -15,6 +15,10 @@ http://linux.die.net/man/3/regex
 
 http://linux.die.net/man/3/pcresyntax
 
+http://www.boost.org/doc/libs/1_44_0/libs/regex/doc/html/boost_regex/syntax/basic_syntax.html
+
+http://www.boost.org/doc/libs/1_44_0/libs/regex/doc/html/boost_regex/syntax/character_classes/std_char_clases.html
+
 # flags
 
 http://linux.die.net/man/3/wctype
