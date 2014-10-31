@@ -19,9 +19,16 @@
 
 char * currtime()
 {
+        char * timestr;
         time_t curr;
+
         time(&curr);
-        return asctime(gmtime(&curr));
+        timestr = asctime(gmtime(&curr));
+
+        /* Remove trailing newline from asctime return value. */
+        if (timestr[24] == '\n') timestr[24] = '\0';
+        
+        return timestr;
 }
 
 char * getAddress(struct sockaddr_in address)
