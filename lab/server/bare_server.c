@@ -87,10 +87,8 @@ int main(int argc,  char *argv[])
 	sd=socket(AF_INET,SOCK_STREAM,0);
 	if ( sd == -1)
 		err(1, "socket failed");
-
-	if (bind(sd, (struct sockaddr *) &sockname, sizeof(sockname)) == -1)
-		err(1, "bind failed");
-
+        
+        /**sockopt*****/
         int opt = 1;
         if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
                 err(1, "socket option set failed");
@@ -100,6 +98,10 @@ int main(int argc,  char *argv[])
         printf("wut: %d\n", wut);
         getsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &wut, &wutlen);
         printf("wut: %d\n", wut);
+        /*******/
+
+	if (bind(sd, (struct sockaddr *) &sockname, sizeof(sockname)) == -1)
+		err(1, "bind failed");
 
 	if (listen(sd,127) == -1)
 		err(1, "listen failed");
@@ -144,6 +146,7 @@ int main(int argc,  char *argv[])
          * handle a short write, or being interrupted by
          * a signal before we could write anything.
          */
+        printf("writing to client\n");
         w = 0;
         written = 0;
         while (written < strlen(buffer)) {
@@ -154,6 +157,7 @@ int main(int argc,  char *argv[])
                 else
                         written += w;
         }
+        printf("write complete\n");
         
         close(clientsd);
         close(sd);
