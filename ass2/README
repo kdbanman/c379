@@ -1,0 +1,67 @@
+TODO
+====
+
+- Incrementally start shoving things from my code into beck's server
+
+- Write file reader into malloced stringer
+
+
+General Approach
+================
+
+Both servers start identically during setup phase, and both have a similarly
+structured listen loop.
+
+For each client connection:
+    - Threaded server spawns a thread.
+        - no need to `join` later, so `detached` for automatic resource cleanup
+    - Forked server forks a child process
+        - child processes inherit socket fd, so no IPC required
+
+Both servers handle clients with the exact same function, though the threaded
+server's handler is wrapped to receive arguments in `void *` form.
+
+Much implementation is shared between both servers: server_util and log_monitor
+
+
+Client Handler
+==============
+
+1. Takes a single accepted socket and reads the sent data.
+2. Attempts to validate the request format by parsing it into a struct
+3. Checks if requested file exists with a stat call
+4. Constructs response with pointer/length pair
+    1. Checks file length with stat call
+           http://stackoverflow.com/questions/8236/
+           how-do-you-determine-the-size-of-a-file-in-c
+    2. Attempts to read file into malloced string.
+5. Constructs response string.
+6. Frees response string and request struct.
+7. Closes socket.
+
+
+Assumptions
+===========
+
+- HTTP requests are valid if prepended by any amount of newlines
+    see: http://tools.ietf.org/html/rfc2616#section-4
+
+- HTTP responses need not be terminated by any particular sequence/flag
+
+
+Q & A
+=====
+
+(for Kirby's reference - do not grade based on any content below)
+
+- are there necessary cleanup steps for threads or processes?
+
+- how do i daemonize within my code?
+    with daemonize()
+
+- is there a single file write sync architecture I can use for fork() and pthreads?
+    yep. mutex.  note special initialization process for fork() mutexing at
+        http://stackoverflow.com/questions/6847973/
+        do-forked-child-processes-use-the-same-semaphore
+    and in the corresponding code in
+        /lab/mutex/forky.c

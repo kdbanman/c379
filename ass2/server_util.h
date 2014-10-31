@@ -27,13 +27,31 @@ typedef struct request {
 } request;
 
 /*
+ * MEMORY: Return string is malloced!
+ *
  * Returns a string of the time current when called formatted as:
  *          Www Mmm dd hh:mm:ss yyy
  */
 char * currtime();
 
 /*
- * MEMORY: Return string is malloced, so free it when done.
+ * MEMORY: Return string is malloced!
+ * 
+ * Returns a string of the ipv4 address found in the sockaddr parameter.
+ */
+
+char * getAddress(struct sockaddr_in address);
+
+/*
+ * MEMORY Return string is malloced!
+ *
+ * Returns the first line (assumed request line) of the request string.
+ */
+
+char * getRequestLine(char * req, int reqLength);
+
+/*
+ * MEMORY: Return string is malloced!
  *
  * Tests adherence of request string to HTTP GET spec.
  * If request is valid HTTP GET, return requested resource (path) string.
@@ -42,7 +60,23 @@ char * currtime();
 char * getResourcePath(char * req);
 
 /*
+ * MEMORY: Return struct is malloced! Call freeRequest to fully destruct.
+ *
  * Validates string against HTTP 1.1 GET and populates a request struct.
- * 
  */
-request parseGet(char * req, struct sockaddr_in address);
+request parseGet(char * req, int length, struct sockaddr_in address);
+
+/*
+ * Frees all member string memory, then the struct itself.
+ */
+void freeRequest(request * req);
+
+/*
+ * MEMORY: Return string is malloced!
+ *
+ * Returns a string that is ready to send to the client.
+ *
+ * @param code must be one of 200, 400, 403, 404, 500.
+ * @param message, msgLen only used for code 200
+ */
+char * constructResponse(int code, char * message, int msgLen);
