@@ -31,6 +31,10 @@
 
 #include "../../ass2/server_util.h"
 
+/*
+ * NOTE:  client is hanging up.  not sure why.
+ */
+
 static void usage()
 {
 	extern char * __progname;
@@ -40,7 +44,7 @@ static void usage()
 
 int main(int argc,  char *argv[])
 {
-        request req;
+        request * req;
 
 	struct sockaddr_in sockname, client;
 	char buffer[2000], recvbuf[2000], *ep;
@@ -88,18 +92,10 @@ int main(int argc,  char *argv[])
 	if ( sd == -1)
 		err(1, "socket failed");
         
-        /**sockopt*****/
         int opt = 1;
         if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
                 err(1, "socket option set failed");
         
-        int wut = 0;
-        int wutlen = sizeof(wut);
-        printf("wut: %d\n", wut);
-        getsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &wut, &wutlen);
-        printf("wut: %d\n", wut);
-        /*******/
-
 	if (bind(sd, (struct sockaddr *) &sockname, sizeof(sockname)) == -1)
 		err(1, "bind failed");
 
@@ -118,47 +114,59 @@ int main(int argc,  char *argv[])
 	 */
 	printf("Server up and listening for connections on port %u\n", port);
 
-        int clientsd;
-        clientlen = sizeof(&client);
-        clientsd = accept(sd, (struct sockaddr *)&client, &clientlen);
-        if (clientsd == -1)
-                err(1, "accept failed");
+        while (1) {
+                int clientsd;
+                clientlen = sizeof(&client);
+                clientsd = accept(sd, (struct sockaddr *)&client, &clientlen);
+                if (clientsd == -1)
+                        err(1, "accept failed");
 
-        ssize_t written, w, read;
-        /*
-         * read from client
-         */
-        printf("reading from client\n");
-        read = recv(clientsd, recvbuf, 1000, 0);
-        printf("read complete\n");
+                ssize_t written, w, read;
+                /*
+                 * read from client
+                 */
+                printf("reading from client\n");
+                read = recv(clientsd, recvbuf, 1000, 0);
 
-        if (read == -1)
-                err(1, "read failed");
-        if (read == 0)
-                fprintf(stderr, "client hung up after:%s", recvbuf);
-        else {
-                printf("%.*s\n", read, recvbuf);
-                req = parseGet(recvbuf, read, client);
+                if (read == -1)
+                        err(1, "read failed");
+                if (read == 0)
+                        fprintf(stderr, "client hung up after:%s", recvbuf);
+                else {
+                        printf("read complete\n");
+
+                        printf("%.*s\n", read, recvbuf);
+                        req = parseGet(recvbuf, read, client);
+
+                        printf("%s\n", req->address);
+                        printf("%s\n", req->timestring);
+                        printf("%s\n", req->requestline);
+                        if (req->validrequest) printf("%s\n", req->resourcepath);
+                        printf("valid: %d\n", req->validrequest);
+
+                        freeRequest(req);
+                }
+
+
+                /*
+                 * write the message to the client, being sure to
+                 * handle a short write, or being interrupted by
+                 * a signal before we could write anything.
+                 */
+                printf("writing to client\n");
+                w = 0;
+                written = 0;
+                while (written < strlen(buffer)) {
+                        w = write(clientsd, buffer + written,
+                            strlen(buffer) - written);
+                        if (w == -1)
+                                err(1, "write failed");
+                        else
+                                written += w;
+                }
+                printf("write complete\n");
+                
+                close(clientsd);
         }
-
-        /*
-         * write the message to the client, being sure to
-         * handle a short write, or being interrupted by
-         * a signal before we could write anything.
-         */
-        printf("writing to client\n");
-        w = 0;
-        written = 0;
-        while (written < strlen(buffer)) {
-                w = write(clientsd, buffer + written,
-                    strlen(buffer) - written);
-                if (w == -1)
-                        err(1, "write failed");
-                else
-                        written += w;
-        }
-        printf("write complete\n");
-        
-        close(clientsd);
         close(sd);
 }
