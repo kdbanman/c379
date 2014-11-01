@@ -17,16 +17,39 @@
 #include <arpa/inet.h>
 #include "server_util.h"
 
+char * fmttime(const struct tm *timeptr)
+{
+    /* static const char arrays thread safe here because they are read only. */
+
+    static const char wday_name[7][3] = {
+        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+    };
+
+    static const char mon_name[12][3] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+
+    char * result = (char *) malloc(25 * sizeof(char));
+
+    sprintf(result,
+            "%.3s %.3s%3d %.2d:%.2d:%.2d %d",
+            wday_name[timeptr->tm_wday],
+            mon_name[timeptr->tm_mon],
+            timeptr->tm_mday, timeptr->tm_hour,
+            timeptr->tm_min, timeptr->tm_sec,
+            1900 + timeptr->tm_year);
+
+    return result;
+}
+
 char * currtime()
 {
         char * timestr;
         time_t curr;
 
         time(&curr);
-        timestr = asctime(gmtime(&curr));
-
-        /* Remove trailing newline from asctime return value. */
-        if (timestr[24] == '\n') timestr[24] = '\0';
+        timestr = fmttime(gmtime(&curr));
         
         return timestr;
 }
@@ -134,6 +157,10 @@ char * getResourcePath(char * req)
         }
         else if (reti == REG_NOMATCH) {
                 /* Match was not found, so the request is invalid. */
+
+                //DEBUG
+                printf("did not match");
+
                 reqpath = NULL;
         }
         else {
@@ -149,7 +176,7 @@ char * getResourcePath(char * req)
         return reqpath;
 }
 
-request parseGet(char * req, int length, struct sockaddr_in address)
+request * parseGet(char * req, int length, struct sockaddr_in address)
 {
         request * sreq;
 
@@ -161,7 +188,7 @@ request parseGet(char * req, int length, struct sockaddr_in address)
         sreq->requestline = getRequestLine(req, length);
         sreq->validrequest = sreq->resourcepath != NULL;
 
-        return *sreq;
+        return sreq;
 }
 
 void freeRequest(request * req)
@@ -169,7 +196,7 @@ void freeRequest(request * req)
         free(req->address);
         free(req->timestring);
         free(req->requestline);
-        free(req->resourcepath);
+        if (req->validrequest) free(req->resourcepath);
         free(req);
 }
 

@@ -9,6 +9,7 @@
  */
 
 #include <netinet/in.h>
+#include <time.h>
 
 /*
  * Client request struct, to be returned by initial GET parse.
@@ -29,8 +30,15 @@ typedef struct request {
 /*
  * MEMORY: Return string is malloced!
  *
- * Returns a string of the time current when called formatted as:
+ * From a time struct, returns a string of the format:
  *          Www Mmm dd hh:mm:ss yyy
+ */
+char * fmttime(const struct tm *timeptr);
+
+/*
+ * MEMORY: Return string is malloced!
+ *
+ * Returns a formatted string of the current time
  */
 char * currtime();
 
@@ -64,7 +72,7 @@ char * getResourcePath(char * req);
  *
  * Validates string against HTTP 1.1 GET and populates a request struct.
  */
-request parseGet(char * req, int length, struct sockaddr_in address);
+request * parseGet(char * req, int length, struct sockaddr_in address);
 
 /*
  * Frees all member string memory, then the struct itself.
