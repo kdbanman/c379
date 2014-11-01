@@ -1,3 +1,13 @@
+
+/*
+ * Kirby Banman
+ * 1173895
+ *
+ * CMPUT 379 EA1
+ * Assignment 2
+ *
+ */
+
 TODO
 ====
 
@@ -21,7 +31,10 @@ For each client connection:
 Both servers handle clients with the exact same function, though the threaded
 server's handler is wrapped to receive arguments in `void *` form.
 
-Much implementation is shared between both servers: server_util and log_monitor
+Much implementation is shared between both servers:
+    - server_conf
+    - server_util
+    - log_monitor
 
 
 Client Handler
