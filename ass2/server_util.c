@@ -65,10 +65,10 @@ char * getRequestLine(char * req, int reqLength)
                         if (i > 0 && req[i-1] == '\r') {
                                 end = i - 1;
                         }
+                        done = 1;
                 }
                 i++;
         }
-
 
         /* Copy start to end if valid, else set emptystring for return. */
         if (start < end) {
