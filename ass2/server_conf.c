@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <errno.h>
+#include <string.h>
 #include "server_conf.h"
 
 void usageErr(char * cmd)
@@ -42,7 +43,8 @@ serverconf getConfig(int argc, char *argv[])
         }
 
         /* Ensure valid file server root directory passed. */
-        config.basedir = argv[2];
+        config.basedir = (char *) malloc((strlen(argv[2]) + 1) * sizeof (char));
+        strcpy(config.basedir, argv[2]);
         if (!validBaseDir(config.basedir))
         {
                 usageErr(argv[0]);
@@ -51,9 +53,14 @@ serverconf getConfig(int argc, char *argv[])
                 perror("  ");
                 exit(1);
         }
+        
+        /* Ensure serve directory is terminated by a slash. */
+        if (config.basedir[strlen(config.basedir)-1] != '/')
+                config.basedir[strlen(config.basedir)] = '/';
 
         /* Ensure valid log file location passed. */
-        config.logloc = argv[3];
+        config.logloc = (char *) malloc(strlen(argv[3]) * sizeof (char));
+        strcpy(config.logloc, argv[3]);
         if (!validLogFile(config.logloc))
         {
                 usageErr(argv[0]);
