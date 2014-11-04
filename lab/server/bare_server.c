@@ -30,63 +30,35 @@
 #include <unistd.h>
 
 #include "../../ass2/server_util.h"
+#include "../../ass2/server_conf.h"
 
 /*
- * NOTE:  client is hanging up.  not sure why.
+ * NOTE:  client is hanging up on google chrome.  not sure why.
+ * WHO CARES
+                // DEBUG accept() is accepting connections from google chrome when it shouldn't...
  */
-
-static void usage()
-{
-	extern char * __progname;
-	fprintf(stderr, "usage: %s portnumber\n", __progname);
-	exit(1);
-}
 
 int main(int argc,  char *argv[])
 {
+        serverconf conf;
+
         request * req;
 
 	struct sockaddr_in sockname, client;
-	char buffer[2000], recvbuf[2000], *ep;
-	struct sigaction sa;
+	char buffer[2000];
 	socklen_t clientlen;
         int sd;
-	u_short port;
-	pid_t pid;
-	u_long p;
 
-	/*
-	 * first, figure out what port we will listen on - it should
-	 * be our first parameter.
-	 */
-
-	if (argc != 2)
-		usage();
-		errno = 0;
-        p = strtoul(argv[1], &ep, 10);
-        if (*argv[1] == '\0' || *ep != '\0') {
-		/* parameter wasn't a number, or was empty */
-		fprintf(stderr, "%s - not a number\n", argv[1]);
-		usage();
-	}
-        if ((errno == ERANGE && p == ULONG_MAX) || (p > USHRT_MAX)) {
-		/* It's a number, but it either can't fit in an unsigned
-		 * long, or is too big for an unsigned short
-		 */
-		fprintf(stderr, "%s - value out of range\n", argv[1]);
-		usage();
-	}
-	/* now safe to do this */
-	port = p;
+        conf = getConfig(argc, argv);
 
 	/* the message we send the client */
 	strncpy(buffer,
-	    constructResponse(404, "go fuck yourself", 16),
+	    constructResponse(200, "go fuck yourself", 16),
 	    2000);
 
 	memset(&sockname, 0, sizeof(sockname));
 	sockname.sin_family = AF_INET;
-	sockname.sin_port = htons(port);
+	sockname.sin_port = htons(conf.port);
 	sockname.sin_addr.s_addr = htonl(INADDR_ANY);
 	sd=socket(AF_INET,SOCK_STREAM,0);
 	if ( sd == -1)
@@ -112,41 +84,50 @@ int main(int argc,  char *argv[])
 	/*
 	 * finally - the main loop.  accept connections and deal with 'em
 	 */
-	printf("Server up and listening for connections on port %u\n", port);
+	printf("Server up on port %u\n", conf.port);
 
         while (1) {
+                char * recvbuf = calloc(2000, sizeof(char));
                 int clientsd;
                 clientlen = sizeof(&client);
+                // DEBUG accept() is accepting connections from google chrome when it shouldn't...
                 clientsd = accept(sd, (struct sockaddr *)&client, &clientlen);
                 if (clientsd == -1)
                         err(1, "accept failed");
 
-                ssize_t written, w, read;
+                ssize_t written, w, rr;
                 /*
                  * read from client
                  */
                 printf("reading from client\n");
-                read = recv(clientsd, recvbuf, 1000, 0);
+                rr = read(clientsd, recvbuf, 2000 * sizeof(char));
 
-                if (read == -1)
+                if (rr == -1) {
                         err(1, "read failed");
-                if (read == 0)
-                        fprintf(stderr, "client hung up after:%s", recvbuf);
-                else {
+                } else if (rr == 0) {
+                        fprintf(stderr, "CLIENT HUNG UP AFTER:\n\n%s", recvbuf);
+                        fprintf(stderr, "\n\n------------ENDHUP\n");
+                } else {
                         printf("read complete\n");
 
-                        printf("%.*s\n", read, recvbuf);
-                        req = parseGet(recvbuf, read, client);
+                        printf("%.*s\n", rr, recvbuf);
+                        req = parseGet(recvbuf, rr, client);
 
+                        printf("--ADDRESS--\n");
                         printf("%s\n", req->address);
+                        printf("--TIMESTRING--\n");
                         printf("%s\n", req->timestring);
+                        printf("--REQUESTLINE--\n");
                         printf("%s\n", req->requestline);
+                        printf("--RESOURCEPATH--\n");
                         if (req->validrequest) printf("%s\n", req->resourcepath);
-                        printf("valid: %d\n", req->validrequest);
+                        printf("--VALID--\n");
+                        printf("%d\n", req->validrequest);
 
                         freeRequest(req);
                 }
 
+                free(recvbuf);
 
                 /*
                  * write the message to the client, being sure to
