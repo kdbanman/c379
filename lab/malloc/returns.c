@@ -3,6 +3,7 @@
 
 typedef struct thing {
     int test;
+    char * www;
 } thing;
 
 thing * get(int a)
@@ -11,6 +12,8 @@ thing * get(int a)
     ret = (thing *) malloc(sizeof (thing));
 
     ret->test = a;
+
+    ret->www = -1;
 
     return ret;
 }
