@@ -8,11 +8,15 @@
  *
  */
 
+#include <errno.h>
 #include <time.h>
 #include <regex.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "server_util.h"
@@ -225,8 +229,8 @@ char * constructResponse(int code, char * message, int msgLen)
 
         } else if (code == 500) {
                 codeLine = "500 Internal Server Error";
-                message = "Error processing request.";
-                msgLen = 25;
+                if (message == NULL) message = "Error processing request.";
+                if (message == NULL) msgLen = 25;
 
         } else {
                 codeLine = "500 Internal Server Error";
@@ -247,4 +251,62 @@ char * constructResponse(int code, char * message, int msgLen)
         sprintf(resp, template, codeLine, date, msgLen, message);
 
         return resp;
+}
+
+int getContents(char * basePath, char * relPath, char ** contents)
+{
+        int size, sizeRead, file;
+        char path[2048]; /* URLs > 2000 characters not widely supported. */
+
+        /* Get entire path. Server directory is always slash-terminated. */
+        strcpy(path, basePath);
+        if (relPath[0] == '/') strcat(path, relPath + 1);
+        else strcat(path, relPath);
+
+        file = open(path, O_RDONLY);
+
+        if (file != -1) {
+                /* Get file size. */
+                size = filesize(path);
+                if (size == -1) {
+                        *contents = ERR500;
+                        return -1;
+                }
+
+                /* Allocate room for file contents. */
+                *contents = (char *) malloc(size);
+
+                /* Attempt to read from file */ 
+                sizeRead = read(file, contents, size);
+                if (sizeRead != size) {
+                        *contents = ERR500;
+                        return -1;
+                }
+                
+                close(file);
+                return size;
+
+        } else if (errno == EACCES) {
+                /* Could not access file. */
+                *contents = ERR403;
+                return -1;
+        } else if (errno == ENOENT) {
+                /* Could not find file. */
+                *contents = ERR404;
+                return -1;
+        } else {
+                /* Something unexpected happened. */
+                *contents = ERR500;
+                return -1;
+        }
+
+}
+
+int filesize(char * fname)
+{
+        struct stat st;
+
+        if (stat(fname, &st) == 0) return st.st_size;
+
+        return -1;
 }
