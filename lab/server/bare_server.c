@@ -69,4 +69,6 @@ int main(int argc,  char *argv[])
         handleRequest(conf, clientsd, client);
 
         close(sd);
+
+        return 0;
 }
