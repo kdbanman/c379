@@ -7,6 +7,7 @@
  * Assignment 2
  *
  */
+#define DEBUG 1
 
 #include <errno.h>
 #include <time.h>
@@ -26,6 +27,11 @@ char sentinel_400;
 char sentinel_403;
 char sentinel_404;
 char sentinel_500;
+
+void debug(char * action)
+{
+        if (DEBUG) printf("--%s--\n", action);
+}
 
 char * fmttime(const struct tm *timeptr)
 {
@@ -219,6 +225,8 @@ char * constructResponse(int code, char * message, int msgLen)
 {
         char * resp, * template, * codeLine, * date;
 
+        debug("CODE");
+
         /* Set code line, message, and mesage length according to code. */
         if (code == 200) {
                 codeLine = "200 OK";
@@ -240,24 +248,33 @@ char * constructResponse(int code, char * message, int msgLen)
 
         } else if (code == 500) {
                 codeLine = "500 Internal Server Error";
-                if (message == NULL) message = "Error processing request.";
-                if (message == NULL) msgLen = 25;
+                if (message == NULL) {
+                        message = "Error processing request.";
+                        msgLen = 25;
+                }
 
         } else {
                 codeLine = "500 Internal Server Error";
                 message = "Unknown response code.";
                 msgLen = 22;
 
+                //TODO log 500
                 fprintf(stderr, "Error: Unknown response code %d\n", code);
         }
 
+        debug("DATE");
+
         date = currtime();
+
+        debug("ALLOCATE");
 
         /* Allocate for response with 200 bytes for header and unexpectedness */
         resp = (char *) malloc((msgLen + 200) * sizeof ' ');
 
         template = "HTTP/1.1 %s\nDate: %s\n"
                    "Content-Type: text/html\nContent-Length: %d\n\n%s";
+
+        debug("FILL");
 
         sprintf(resp, template, codeLine, date, msgLen, message);
 
@@ -274,9 +291,21 @@ int getContents(char * basePath, char * relPath, char ** contents)
         if (relPath[0] == '/') strcat(path, relPath + 1);
         else strcat(path, relPath);
 
+        debug("TEST");
+        
+        /* Test if file exists and is not a device, socket, FIFO, etc. */
+        if (!isRegFile(path)) {
+                *contents = ERR404;
+                return -1;
+        }
+
+        debug("OPEN");
+
         file = open(path, O_RDONLY);
 
         if (file != -1) {
+                debug("SIZE");
+
                 /* Get file size. */
                 size = filesize(path);
                 if (size == -1) {
@@ -284,15 +313,21 @@ int getContents(char * basePath, char * relPath, char ** contents)
                         return -1;
                 }
 
+                debug("ALLOCATE");
+
                 /* Allocate room for file contents. */
                 *contents = (char *) malloc(size);
 
+                debug("READ");
+
                 /* Attempt to read from file */ 
-                sizeRead = read(file, contents, size);
+                sizeRead = read(file, *contents, size);
                 if (sizeRead != size) {
                         *contents = ERR500;
                         return -1;
                 }
+
+                debug("CLOSE");
                 
                 close(file);
                 return size;
@@ -306,6 +341,8 @@ int getContents(char * basePath, char * relPath, char ** contents)
                 *contents = ERR404;
                 return -1;
         } else {
+                debug("ERROR");
+
                 /* Something unexpected happened. */
                 *contents = ERR500;
                 return -1;
@@ -313,11 +350,26 @@ int getContents(char * basePath, char * relPath, char ** contents)
 
 }
 
+int isRegFile(char * fname)
+{
+        struct stat st;
+
+        if (stat(fname, &st) == 0) {
+                if (st.st_mode & S_IFREG) 
+                    return 1;
+        }
+
+        return 0;
+}
+
 int filesize(char * fname)
 {
         struct stat st;
 
-        if (stat(fname, &st) == 0) return st.st_size;
+        if (stat(fname, &st) == 0) {
+                if (st.st_mode & S_IFREG) 
+                        return st.st_size;
+        }
 
         return -1;
 }
@@ -332,11 +384,15 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
         /* Set default response to catch unanticipated behaviour. */
         msgPtr = ERR500;
 
+        debug("ACCEPT");
+
         if (clientsd == -1) {
                 /* TODO log 500 */
                 printf("ERROR: socket accept failed\n");
                 return;
         }
+
+        debug("READ");
 
         /* Read message sent by client upon connection. */
         r = read(clientsd, recvbuf, sizeof recvbuf);
@@ -352,11 +408,15 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
                 close(clientsd);
                 return;
         } else {
+                debug("PARSE");
+
                 /* Get request struct from received message. */
                 req = parseGet(recvbuf, r, clientAdd);
 
                 /* Examine if request was valid. */
                 if (!req->validrequest) {
+                        debug("400");
+
                         /* Invalid request - construct 400 response. */
                         respPtr = constructResponse(400, NULL, 0);
                         //TODO log 400
@@ -370,23 +430,33 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
                         
                         /* Examine file read results, constructing response. */
                         if (fread != -1) {
+                                debug("200");
+
                                 /* Success - construct 200 OK response. */
                                 respPtr = constructResponse(200, msgPtr, fread);
                                 //TODO log 200
                         } else if (msgPtr == ERR403) {
+                                debug("403");
+
                                 /* No permissions - construct 403. */
                                 respPtr = constructResponse(403, NULL, 0);
                                 //TODO log 403
                         } else if (msgPtr == ERR404) {
+                                debug("404");
+
                                 /* No file - construct 404. */
                                 respPtr = constructResponse(404, NULL, 0);
                                 //TODO log 404
                         } else if (msgPtr == ERR500) {
+                                debug("500");
+
                                 /* Error - construct 500. */
                                 respPtr = constructResponse(500, NULL, 0);
                                 //TODO log 500
                         }
                 }
+                
+                debug("SEND");
 
                 /* Write response to client socket. */
                 w = 0;
@@ -404,6 +474,8 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
                                 written += w;
                         }
                 }
+
+                debug("CLEAN");
 
                 if (isFreeable(respPtr)) free(respPtr);
                 if (isFreeable(msgPtr)) free(msgPtr);

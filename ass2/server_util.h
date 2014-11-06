@@ -41,6 +41,11 @@ typedef struct request {
 } request;
 
 /*
+ * If in debug mode, log a message.
+ */
+void debug(char * action);
+
+/*
  * MEMORY: Return string is malloced!
  *
  * From a time struct, returns a string of the format:
@@ -137,9 +142,14 @@ char * constructResponse(int code, char * message, int msgLen);
 int getContents(char * basePath, char * relPath, char ** contents);
 
 /*
+ * Return nonzero if file does not exist or is a device, socket, FIFO, etc.
+ */
+int isRegFile(char * fname);
+
+/*
  * Attempts to get the specified file's size.
  * 
- * Returns -1 on error.
+ * Returns -1 if the pat doesn't point at a regular file.
  */
 int filesize(char * fname);
 
