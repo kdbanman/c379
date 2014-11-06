@@ -8,6 +8,9 @@
  *
  */
 
+#ifndef SERVER_CONF_H_
+#define SERVER_CONF_H_
+
 typedef struct serverconf {
         int port;
         char * basedir;
@@ -39,3 +42,5 @@ int validBaseDir(char * path);
  * Returns nonzero (true) if the passed string is a writable file.
  */
 int validLogFile(char * path);
+
+#endif
