@@ -11,10 +11,6 @@
 TODO
 ====
 
-- find segfault
-
-- test on empty get, no permissions, nonexist
-
 - write getListeningSocket(serverconfig);
 
 - write forky
@@ -28,7 +24,7 @@ TODO
 
 - grep for todo logs
 
-- grep for printfs and remove them
+- grep for printfs and remove them or swap for logs
 
 - daemonize
 
