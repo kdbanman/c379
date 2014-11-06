@@ -20,31 +20,35 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "server_util.h"
+#include "server_conf.h"
+
+char sentinel_400;
+char sentinel_403;
+char sentinel_404;
+char sentinel_500;
 
 char * fmttime(const struct tm *timeptr)
 {
-    /* static const char arrays thread safe here because they are read only. */
+        /* static char arrays thread safe here because they are read only. */
+        static const char wday_name[7][3] = {
+                "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+        };
+        static const char mon_name[12][3] = {
+                "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        };
 
-    static const char wday_name[7][3] = {
-        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-    };
+        char * result = (char *) malloc(25 * sizeof(char));
 
-    static const char mon_name[12][3] = {
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    };
+        sprintf(result,
+                "%.3s %.3s%3d %.2d:%.2d:%.2d %d",
+                wday_name[timeptr->tm_wday],
+                mon_name[timeptr->tm_mon],
+                timeptr->tm_mday, timeptr->tm_hour,
+                timeptr->tm_min, timeptr->tm_sec,
+                1900 + timeptr->tm_year);
 
-    char * result = (char *) malloc(25 * sizeof(char));
-
-    sprintf(result,
-            "%.3s %.3s%3d %.2d:%.2d:%.2d %d",
-            wday_name[timeptr->tm_wday],
-            mon_name[timeptr->tm_mon],
-            timeptr->tm_mday, timeptr->tm_hour,
-            timeptr->tm_min, timeptr->tm_sec,
-            1900 + timeptr->tm_year);
-
-    return result;
+        return result;
 }
 
 char * currtime()
@@ -161,11 +165,7 @@ char * getResourcePath(char * req)
         }
         else if (reti == REG_NOMATCH) {
                 /* Match was not found, so the request is invalid. */
-
-                //DEBUG
-                printf("did not match");
-
-                reqpath = NULL;
+                reqpath = ERR400;
         }
         else {
                 /* Regex library experienced unexpected failure. */
@@ -195,13 +195,24 @@ request * parseGet(char * req, int length, struct sockaddr_in address)
         return sreq;
 }
 
+int isFreeable(char * ptr)
+{
+        if (ptr == NULL || 
+            ptr == ERR400 ||
+            ptr == ERR403 ||
+            ptr == ERR404 ||
+            ptr == ERR500) return 0;
+
+        return 1;
+}
+
 void freeRequest(request * req)
 {
-        free(req->address);
-        free(req->timestring);
-        free(req->requestline);
-        if (req->validrequest) free(req->resourcepath);
-        free(req);
+        if (isFreeable(req->address)) free(req->address);
+        if (isFreeable(req->timestring)) free(req->timestring);
+        if (isFreeable(req->requestline)) free(req->requestline);
+        if (isFreeable(req->resourcepath)) free(req->resourcepath);
+        if (req != NULL) free(req);
 }
 
 char * constructResponse(int code, char * message, int msgLen)
@@ -309,4 +320,95 @@ int filesize(char * fname)
         if (stat(fname, &st) == 0) return st.st_size;
 
         return -1;
+}
+
+void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
+{
+        int fread, respLen;
+        char recvbuf[4096], * msgPtr, * respPtr;
+        ssize_t r, w, written;
+        request * req;
+
+        /* Set default response to catch unanticipated behaviour. */
+        msgPtr = ERR500;
+
+        if (clientsd == -1) {
+                /* TODO log 500 */
+                printf("ERROR: socket accept failed\n");
+                return;
+        }
+
+        /* Read message sent by client upon connection. */
+        r = read(clientsd, recvbuf, sizeof recvbuf);
+
+        if (r == -1) {
+                /* TODO log 500, read failed */
+                printf("ERROR: socket read failed\n");
+                close(clientsd);
+                return;
+        } else if (r == 0) {
+                /* TODO log 500 */
+                printf("ERROR: client hung up\n");
+                close(clientsd);
+                return;
+        } else {
+                /* Get request struct from received message. */
+                req = parseGet(recvbuf, r, clientAdd);
+
+                /* Examine if request was valid. */
+                if (!req->validrequest) {
+                        /* Invalid request - construct 400 response. */
+                        respPtr = constructResponse(400, NULL, 0);
+                        //TODO log 400
+                } else {
+                        /* Request was valid.
+                         * Attempt to read file into mem at pointer msgPtr.
+                         */
+                        fread = getContents(conf.basedir,
+                                                   req->resourcepath,
+                                                   &msgPtr);
+                        
+                        /* Examine file read results, constructing response. */
+                        if (fread != -1) {
+                                /* Success - construct 200 OK response. */
+                                respPtr = constructResponse(200, msgPtr, fread);
+                                //TODO log 200
+                        } else if (msgPtr == ERR403) {
+                                /* No permissions - construct 403. */
+                                respPtr = constructResponse(403, NULL, 0);
+                                //TODO log 403
+                        } else if (msgPtr == ERR404) {
+                                /* No file - construct 404. */
+                                respPtr = constructResponse(404, NULL, 0);
+                                //TODO log 404
+                        } else if (msgPtr == ERR500) {
+                                /* Error - construct 500. */
+                                respPtr = constructResponse(500, NULL, 0);
+                                //TODO log 500
+                        }
+                }
+
+                /* Write response to client socket. */
+                w = 0;
+                written = 0;
+                respLen = strlen(respPtr);
+                while (written < respLen) {
+                        w = write(clientsd,
+                                  respPtr + written,
+                                  respLen - written);
+                        if (w == -1) {
+                                /* TODO log 500. */
+                                printf("ERROR: socket write failed\n");
+                                return;
+                        } else {
+                                written += w;
+                        }
+                }
+
+                if (isFreeable(respPtr)) free(respPtr);
+                if (isFreeable(msgPtr)) free(msgPtr);
+                freeRequest(req);
+        }
+
+        close(clientsd);
 }

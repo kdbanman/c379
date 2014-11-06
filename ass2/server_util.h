@@ -10,16 +10,17 @@
 
 #include <netinet/in.h>
 #include <time.h>
+#include "server_conf.h"
 
-#define ERR400 ((void *) &sentinel_400)
-#define ERR403 ((void *) &sentinel_403)
-#define ERR404 ((void *) &sentinel_404)
-#define ERR500 ((void *) &sentinel_500)
+#define ERR400 (&sentinel_400)
+#define ERR403 (&sentinel_403)
+#define ERR404 (&sentinel_404)
+#define ERR500 (&sentinel_500)
 
-char sentinel_400;
-char sentinel_403;
-char sentinel_404;
-char sentinel_500;
+extern char sentinel_400;
+extern char sentinel_403;
+extern char sentinel_404;
+extern char sentinel_500;
 
 /*
  * Client request struct, to be returned by initial GET parse.
@@ -99,6 +100,11 @@ char * getResourcePath(char * req);
 request * parseGet(char * req, int length, struct sockaddr_in address);
 
 /*
+ * Returns zero iff the string is a null pointer or any of the sentinels.
+ */
+int isFreeable(char * ptr);
+
+/*
  * Frees all member string memory, then the struct itself.
  */
 void freeRequest(request * req);
@@ -123,8 +129,10 @@ char * constructResponse(int code, char * message, int msgLen);
  *  - ERR404
  *  - ERR500
  *
- *  @params basePath and relPath are concatenated to a URI location
- *  @param contents will be modified to point at a new char buffer
+ * Returns number of bytes read.
+ *
+ * @params basePath and relPath are concatenated to a URI location
+ * @param contents will be modified to point at a new char bufer
  */
 int getContents(char * basePath, char * relPath, char ** contents);
 
@@ -134,3 +142,9 @@ int getContents(char * basePath, char * relPath, char ** contents);
  * Returns -1 on error.
  */
 int filesize(char * fname);
+
+/*
+ * Master function to take an accepted socket descriptor, respond to it, and
+ * log the result.
+ */
+void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd);
