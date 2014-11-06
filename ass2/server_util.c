@@ -7,6 +7,7 @@
  * Assignment 2
  *
  */
+
 #define DEBUG 1
 
 #include <errno.h>
@@ -31,6 +32,44 @@ char sentinel_500;
 void debug(char * action)
 {
         if (DEBUG) printf("--%s--\n", action);
+}
+
+int listeningSock(serverconf conf)
+{
+        struct sockaddr_in add;
+        int sd;
+        int opt;
+
+        memset(&add, 0, sizeof(add));
+        add.sin_family = AF_INET;
+        add.sin_port = htons(conf.port);
+        add.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        /* Get socket descriptor. */
+        sd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sd == -1) {
+                fprintf(stderr, "ERROR: Socket creation failed.\n");
+                exit(1);
+        }
+
+        /* Set socket as reusable. */
+        opt = 1;
+        if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+                fprintf(stderr, "ERROR: Socket option set failed.\n");
+                exit(1);
+        }
+
+        /* Bind socket to desired address. */
+        if (bind(sd, (struct sockaddr *) &add, sizeof(add)) == -1) {
+                fprintf(stderr, "ERROR: Socket bind to address failed.\n");
+                exit(1);
+        }
+
+        if (listen(sd, 127) == -1) {
+                fprintf(stderr, "ERROR: Could not listen to socket.\n");
+        }
+
+        return sd;
 }
 
 char * fmttime(const struct tm *timeptr)
@@ -374,10 +413,25 @@ int filesize(char * fname)
         return -1;
 }
 
-void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
+char * log500Msg(char * msg)
 {
+        //TODO use server time
+
+        return (char *) malloc(5);
+}
+
+char * logMsg(int code, request req, int written, int total)
+{
+        // TODO use time, add, request line from req
+
+        return (char *) malloc(5);
+}
+
+char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
+{
+        //TODO returns are bad
         int fread, respLen;
-        char recvbuf[4096], * msgPtr, * respPtr;
+        char recvbuf[4096], * msgPtr, * respPtr, * log;
         ssize_t r, w, written;
         request * req;
 
@@ -386,27 +440,21 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
 
         debug("ACCEPT");
 
-        if (clientsd == -1) {
-                /* TODO log 500 */
-                printf("ERROR: socket accept failed\n");
-                return;
+        if (csd == -1) {
+                return log500Msg("ERROR: socket accept failed.");
         }
 
         debug("READ");
 
         /* Read message sent by client upon connection. */
-        r = read(clientsd, recvbuf, sizeof recvbuf);
+        r = read(csd, recvbuf, sizeof recvbuf);
 
         if (r == -1) {
-                /* TODO log 500, read failed */
-                printf("ERROR: socket read failed\n");
-                close(clientsd);
-                return;
+                close(csd);
+                return log500Msg("ERROR: socket read failed\n");
         } else if (r == 0) {
-                /* TODO log 500 */
-                printf("ERROR: client hung up\n");
-                close(clientsd);
-                return;
+                close(csd);
+                return log500Msg("ERROR: client hung up\n");
         } else {
                 debug("PARSE");
 
@@ -419,7 +467,11 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
 
                         /* Invalid request - construct 400 response. */
                         respPtr = constructResponse(400, NULL, 0);
-                        //TODO log 400
+
+                        /* Construct log and free request struct. */
+                        log = logMsg(400, req, 0, 0);
+                        freeRequest(req);
+                        return log;
                 } else {
                         /* Request was valid.
                          * Attempt to read file into mem at pointer msgPtr.
@@ -452,7 +504,7 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
 
                                 /* Error - construct 500. */
                                 respPtr = constructResponse(500, NULL, 0);
-                                //TODO log 500
+                                return log500Msg("ERROR: Failure reading file.")
                         }
                 }
                 
@@ -463,13 +515,11 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
                 written = 0;
                 respLen = strlen(respPtr);
                 while (written < respLen) {
-                        w = write(clientsd,
+                        w = write(csd,
                                   respPtr + written,
                                   respLen - written);
                         if (w == -1) {
-                                /* TODO log 500. */
-                                printf("ERROR: socket write failed\n");
-                                return;
+                                return log500Msg("ERROR: Socket write failed.");
                         } else {
                                 written += w;
                         }
@@ -482,5 +532,5 @@ void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd)
                 freeRequest(req);
         }
 
-        close(clientsd);
+        close(csd);
 }

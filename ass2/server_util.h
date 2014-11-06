@@ -46,6 +46,12 @@ typedef struct request {
 void debug(char * action);
 
 /*
+ * Based on a desired config, returns a reusable, bound, and listening server
+ * socket.  Program exits on failure.
+ */
+int listeningSock(serverconf conf);
+
+/*
  * MEMORY: Return string is malloced!
  *
  * From a time struct, returns a string of the format:
@@ -154,7 +160,29 @@ int isRegFile(char * fname);
 int filesize(char * fname);
 
 /*
+ * MEMORY: Return string is malloced!
+ *
+ * Returns an error message ready to log.
+ */
+char * log500Msg(char * msg);
+
+/*
+ * MEMORY: Return string is malloced!
+ *
+ * Returns a log message according to the response code and the request.
+ *
+ * @param code One of 200, 400, 403, 404.
+ * @param req Request object being responded to.
+ * @params written and total are the file size and bytes written to the socket.
+ */
+char * logMsg(int code, request req, int written, int total);
+
+/*
+ * MEMORY: Return string is malloced!
+ *
  * Master function to take an accepted socket descriptor, respond to it, and
  * log the result.
+ *
+ * Returns a completed log statement for the requset.
  */
-void handleRequest(serverconf conf, int clientsd, struct sockaddr_in clientAdd);
+char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd);
