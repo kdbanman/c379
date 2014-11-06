@@ -11,19 +11,20 @@
 TODO
 ====
 
-- Incrementally start shoving things from my code into beck's server
-    - test file reader into malloced stringer
-    - WHO CARES ABOUT THE DOUBLE ACCEPT FROM GOOGLE CHROME.  PTHREAD AND FORK WON"T CARE ANYWAYS
-
-- make getResource return ERR400 if malformed (instead of null)
-
-- in freeRequest, check that each pointer is non null and not sentinel
-    - if (freeable(ptr)) free(...)
-
 - write handlerequest (serverconfig, requststr, ...)
+
+- write forky
+
+- write pthready
+
+- put mutex init code p&f in log monitor.h
 
 - write getLogMessage(request * req, responsecode)
     - if non null free(), don't report errors for this
+
+- grep for printfs and remove them
+
+- daemonize
 
 
 General Approach
