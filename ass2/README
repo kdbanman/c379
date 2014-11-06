@@ -11,7 +11,11 @@
 TODO
 ====
 
-- write handlerequest (serverconfig, requststr, ...)
+- find segfault
+
+- test on empty get, no permissions, nonexist
+
+- write getListeningSocket(serverconfig);
 
 - write forky
 
@@ -21,6 +25,8 @@ TODO
 
 - write getLogMessage(request * req, responsecode)
     - if non null free(), don't report errors for this
+
+- grep for todo logs
 
 - grep for printfs and remove them
 
