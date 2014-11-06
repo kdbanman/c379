@@ -36,33 +36,16 @@ int main(int argc,  char *argv[])
 {
         serverconf conf;
 
-	struct sockaddr_in sockname, client;
+	struct sockaddr_in client;
 	socklen_t clientlen;
-        int sd;
+        int sd, clientsd;;
 
         conf = getConfig(argc, argv);
 
-	memset(&sockname, 0, sizeof(sockname));
-	sockname.sin_family = AF_INET;
-	sockname.sin_port = htons(conf.port);
-	sockname.sin_addr.s_addr = htonl(INADDR_ANY);
-	sd=socket(AF_INET,SOCK_STREAM,0);
-	if ( sd == -1)
-		err(1, "socket failed");
-        
-        int opt = 1;
-        if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-                err(1, "socket option set failed");
-        
-	if (bind(sd, (struct sockaddr *) &sockname, sizeof(sockname)) == -1)
-		err(1, "bind failed");
-
-	if (listen(sd,127) == -1)
-		err(1, "listen failed");
+        sd = listeningSock(conf);
 
 	printf("Server up on port %u\n", conf.port);
 
-        int clientsd;
         clientlen = sizeof(&client);
         clientsd = accept(sd, (struct sockaddr *)&client, &clientlen);
 
