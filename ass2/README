@@ -11,11 +11,9 @@
 TODO
 ====
 
-- write logmsgs
-
-- ensure time is GMT, add GMT to return string, and check usages for hardcoded lengths that will change
-
 - write forky
+
+- only 404s happen after one 404 happens...
 
 - write pthready
 
@@ -27,6 +25,10 @@ TODO
     - everywhere after daemonization
 
 - daemonize
+
+- if still hang up issues, just ignore them silently
+
+- test er500 cases
 
 
 General Approach
