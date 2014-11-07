@@ -11,7 +11,7 @@
 TODO
 ====
 
-- excise return statements in handleRequest - nothing is being written.
+- write logmsgs
 
 - ensure time is GMT, add GMT to return string, and check usages for hardcoded lengths that will change
 
@@ -21,7 +21,7 @@ TODO
 
 - put mutex init code p&f in log monitor.h
 
-- grep for todo logs
+- grep for // and 4 spaces
 
 - grep for printfs and remove them or swap for logs
     - everywhere after daemonization
