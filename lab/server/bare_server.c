@@ -35,25 +35,17 @@
 int main(int argc,  char *argv[])
 {
         serverconf conf;
-        char * log;
-	struct sockaddr_in clientAddr;
-	socklen_t clientlen;
-        int sd, clientsd;;
+        int sd;
+        safefile log;
 
         conf = getConfig(argc, argv);
 
         sd = listeningSock(conf);
 
 	printf("Server up on port %u\n", conf.port);
-
-        clientlen = sizeof(&clientAddr);
-        clientsd = accept(sd, (struct sockaddr *)&clientAddr, &clientlen);
-
-        handleRequest(conf, clientsd, clientAddr, &log);
-
-        printf("%s\n", log);
-
-        if (isFreeable(log)) free(log);
+        
+        while (1)
+            processClient(sd, conf, &log);
 
         close(sd);
 
