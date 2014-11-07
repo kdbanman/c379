@@ -86,12 +86,14 @@ char * fmttime(const struct tm *timeptr)
         char * result = (char *) malloc(25 * sizeof(char));
 
         sprintf(result,
-                "%.3s %.3s%3d %.2d:%.2d:%.2d %d",
+                "%.3s %.2d %.3s %d %.2d:%.2d:%.2d GMT",
                 wday_name[timeptr->tm_wday],
+                timeptr->tm_mday,
                 mon_name[timeptr->tm_mon],
-                timeptr->tm_mday, timeptr->tm_hour,
-                timeptr->tm_min, timeptr->tm_sec,
-                1900 + timeptr->tm_year);
+                1900 + timeptr->tm_year,
+                timeptr->tm_hour,
+                timeptr->tm_min,
+                timeptr->tm_sec);
 
         return result;
 }
@@ -296,9 +298,6 @@ char * constructResponse(int code, char * message, int msgLen)
                 codeLine = "500 Internal Server Error";
                 message = "Unknown response code.";
                 msgLen = 22;
-
-                //TODO log 500
-                fprintf(stderr, "Error: Unknown response code %d\n", code);
         }
 
         debug("DATE");
@@ -440,16 +439,56 @@ void sockWrite(request * req, int csd, char * msg, char ** log)
 
 char * log500Msg(char * msg)
 {
-        //TODO use server time
+        char * log, * date, * template;
+        int maxLen;
 
-        return (char *) malloc(5);
+        date = currtime();
+
+        /* Allocate room for date and message. */
+        maxLen = (200 + strlen(msg) + strlen(date)) * sizeof (char);
+        log = (char *) malloc(maxLen);
+
+        template = "%s\tHTTP/1.1 500 Internal Server Error\tERROR: %s\n";
+        sprintf(log, template, date, msg);
+
+        free(date);
+        return log;
 }
 
 char * logMsg(int code, request * req, int written, int total)
 {
-        // TODO use time, add, request line from req
+        char * log, response[200], * template;
+        int maxLen;
 
-        return (char *) malloc(5);
+        /* Allocate for length of elements. */
+        maxLen = strlen(req->timestring) + strlen(req->address) +
+                 strlen(req->requestline) + 200;
+        log = (char *) malloc(maxLen);
+
+        /* Generate response string based on code. */
+        if (code == 200) {
+                sprintf(response, "200 OK %d/%d", written, total);
+        } else if (code == 400) {
+                sprintf(response, "400 Bad Request");
+        } else if (code == 403) {
+                sprintf(response, "403 Forbidden");
+        } else if (code == 404) {
+                sprintf(response, "404 Not Found");
+        } else {
+                free(log);
+                return log500Msg("Invalid code sent to logMsg.");
+        }        
+
+        /* Fill template string. */
+        template = "%s\t%s\t%s\t%s\n";
+        sprintf(log,
+                template,
+                req->timestring,
+                req->address,
+                req->requestline,
+                response);
+
+        return log;
 }
 
 void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)

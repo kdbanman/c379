@@ -23,6 +23,7 @@ extern char sentinel_404;
 extern char sentinel_500;
 
 typedef struct sockaddr_in saddr;
+
 /*
  * Client request struct, to be returned by initial GET parse.
  * - address set according to socket api.
