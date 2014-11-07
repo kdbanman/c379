@@ -35,8 +35,8 @@
 int main(int argc,  char *argv[])
 {
         serverconf conf;
-
-	struct sockaddr_in client;
+        char * log;
+	struct sockaddr_in clientAddr;
 	socklen_t clientlen;
         int sd, clientsd;;
 
@@ -46,10 +46,14 @@ int main(int argc,  char *argv[])
 
 	printf("Server up on port %u\n", conf.port);
 
-        clientlen = sizeof(&client);
-        clientsd = accept(sd, (struct sockaddr *)&client, &clientlen);
+        clientlen = sizeof(&clientAddr);
+        clientsd = accept(sd, (struct sockaddr *)&clientAddr, &clientlen);
 
-        handleRequest(conf, clientsd, client);
+        handleRequest(conf, clientsd, clientAddr, &log);
+
+        printf("%s\n", log);
+
+        if (isFreeable(log)) free(log);
 
         close(sd);
 
