@@ -413,6 +413,28 @@ int filesize(char * fname)
         return -1;
 }
 
+void sockWrite(request * req, int csd, char * msg, char ** log)
+{
+        int len;
+        ssize_t w, written;
+
+        debug("SEND");
+
+        w = 0;
+        written = 0;
+        len = strlen(msg);
+        while (written < len) {
+                w = write(csd, msg + written, len - written);
+                if (w == -1) {
+                        *log = log500Msg("Socket write failed.");
+                        break;
+                } else {
+                        written += w;
+                }
+        }
+        *log = logMsg(200, req, written, len);
+}
+
 char * log500Msg(char * msg)
 {
         //TODO use server time
@@ -420,19 +442,19 @@ char * log500Msg(char * msg)
         return (char *) malloc(5);
 }
 
-char * logMsg(int code, request req, int written, int total)
+char * logMsg(int code, request * req, int written, int total)
 {
         // TODO use time, add, request line from req
 
         return (char *) malloc(5);
 }
 
-char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
+void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
 {
         //TODO returns are bad
-        int fread, respLen;
-        char recvbuf[4096], * msgPtr, * respPtr, * log;
-        ssize_t r, w, written;
+        int fread;
+        char recvbuf[4096], * msgPtr, * respPtr;
+        ssize_t r;
         request * req;
 
         /* Set default response to catch unanticipated behaviour. */
@@ -441,7 +463,9 @@ char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
         debug("ACCEPT");
 
         if (csd == -1) {
-                return log500Msg("ERROR: socket accept failed.");
+                *log = log500Msg("Socket accept failed.");
+                /* No message receivable, nothing to respond to. */
+                return;
         }
 
         debug("READ");
@@ -450,17 +474,25 @@ char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
         r = read(csd, recvbuf, sizeof recvbuf);
 
         if (r == -1) {
-                close(csd);
-                return log500Msg("ERROR: socket read failed\n");
+                /* No message recieved, 500 response possible. */
+                respPtr = constructResponse(500, "Socket read failed.", 19);
+                *log = log500Msg("Socket read failed\n");
         } else if (r == 0) {
+                /* No message recieved, no response possible.
+                 * Close socket and return.
+                 */
                 close(csd);
-                return log500Msg("ERROR: client hung up\n");
+                *log = log500Msg("Client hung up\n");
+                return;
         } else {
                 debug("PARSE");
 
                 /* Get request struct from received message. */
                 req = parseGet(recvbuf, r, clientAdd);
 
+                //TODO keep looking at control flow, removing as many
+                //returns as possible
+                
                 /* Examine if request was valid. */
                 if (!req->validrequest) {
                         debug("400");
@@ -469,9 +501,9 @@ char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
                         respPtr = constructResponse(400, NULL, 0);
 
                         /* Construct log and free request struct. */
-                        log = logMsg(400, req, 0, 0);
+                        *log = logMsg(400, req, 0, 0);
                         freeRequest(req);
-                        return log;
+                        return;
                 } else {
                         /* Request was valid.
                          * Attempt to read file into mem at pointer msgPtr.
@@ -504,33 +536,20 @@ char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd)
 
                                 /* Error - construct 500. */
                                 respPtr = constructResponse(500, NULL, 0);
-                                return log500Msg("ERROR: Failure reading file.")
+                                *log = log500Msg("Failure reading file.");
                         }
                 }
-                
-                debug("SEND");
-
-                /* Write response to client socket. */
-                w = 0;
-                written = 0;
-                respLen = strlen(respPtr);
-                while (written < respLen) {
-                        w = write(csd,
-                                  respPtr + written,
-                                  respLen - written);
-                        if (w == -1) {
-                                return log500Msg("ERROR: Socket write failed.");
-                        } else {
-                                written += w;
-                        }
-                }
-
-                debug("CLEAN");
-
-                if (isFreeable(respPtr)) free(respPtr);
-                if (isFreeable(msgPtr)) free(msgPtr);
-                freeRequest(req);
         }
+        debug("SEND");
+
+        /* Write response to client socket. */
+        sockWrite(req, csd, respPtr, log);
+
+        debug("CLEAN");
+
+        if (isFreeable(respPtr)) free(respPtr);
+        if (isFreeable(msgPtr)) free(msgPtr);
+        freeRequest(req);
 
         close(csd);
 }

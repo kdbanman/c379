@@ -22,6 +22,7 @@ extern char sentinel_403;
 extern char sentinel_404;
 extern char sentinel_500;
 
+typedef struct sockaddr_in saddr;
 /*
  * Client request struct, to be returned by initial GET parse.
  * - address set according to socket api.
@@ -160,6 +161,11 @@ int isRegFile(char * fname);
 int filesize(char * fname);
 
 /*
+ * Writes a string buffer to a socket, generating a log message.
+ */
+void sockWrite(request * req, int csd, char * msg, char ** log);
+
+/*
  * MEMORY: Return string is malloced!
  *
  * Returns an error message ready to log.
@@ -175,14 +181,12 @@ char * log500Msg(char * msg);
  * @param req Request object being responded to.
  * @params written and total are the file size and bytes written to the socket.
  */
-char * logMsg(int code, request req, int written, int total);
+char * logMsg(int code, request * req, int written, int total);
 
 /*
- * MEMORY: Return string is malloced!
+ * MEMORY: Log string is malloced!
  *
  * Master function to take an accepted socket descriptor, respond to it, and
  * log the result.
- *
- * Returns a completed log statement for the requset.
  */
-char * handleRequest(serverconf conf, int csd, struct sockaddr_in clientAdd);
+void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log);
