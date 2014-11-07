@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include "server_util.h"
 #include "server_conf.h"
+#include "log_monitor.h"
 
 char sentinel_400;
 char sentinel_403;
@@ -600,4 +601,22 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         freeRequest(req);
 
         close(csd);
+}
+
+void processClient(int sd, serverconf conf, safefile * log)
+{
+        char * logMsg;
+        saddr clientaddr;
+        socklen_t clientlen;
+        int clientsd;
+
+        clientlen = sizeof(&clientaddr);
+        clientsd = accept(sd, (struct sockaddr *) &clientaddr, &clientlen);
+
+        handleRequest(conf, clientsd, clientaddr, &logMsg);
+
+        //TODO safeWrite(log, logMsg);
+        printf("%s", logMsg);
+
+        if (isFreeable(logMsg)) free(logMsg);
 }

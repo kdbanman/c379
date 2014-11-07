@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include "server_conf.h"
+#include "log_monitor.h"
 
 #define ERR400 (&sentinel_400)
 #define ERR403 (&sentinel_403)
@@ -187,7 +188,12 @@ char * logMsg(int code, request * req, int written, int total);
 /*
  * MEMORY: Log string is malloced!
  *
- * Master function to take an accepted socket descriptor, respond to it, and
- * log the result.
+ * Take an accepted client socket descriptor, respond to it, and generate the
+ * log message.
  */
 void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log);
+
+/*
+ * Accept a client from a server socket, handle the request, and log the result.
+ */
+void processClient(int sd, serverconf conf, safefile * log);
