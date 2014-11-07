@@ -317,6 +317,8 @@ char * constructResponse(int code, char * message, int msgLen)
 
         sprintf(resp, template, codeLine, date, msgLen, message);
 
+        free(date);
+
         return resp;
 }
 
@@ -432,7 +434,8 @@ void sockWrite(request * req, int csd, char * msg, char ** log)
                         written += w;
                 }
         }
-        *log = logMsg(200, req, written, len);
+        /* If log is still not set, form 200 OK log response. */
+        if (*log == NULL) *log = logMsg(200, req, written, len);
 }
 
 char * log500Msg(char * msg)
@@ -451,48 +454,51 @@ char * logMsg(int code, request * req, int written, int total)
 
 void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
 {
-        //TODO returns are bad
         int fread;
-        char recvbuf[4096], * msgPtr, * respPtr;
+        char msgbuf[4096], * msgPtr, * respPtr;
         ssize_t r;
         request * req;
 
         /* Set default response to catch unanticipated behaviour. */
         msgPtr = ERR500;
+        *log = NULL;
 
         debug("ACCEPT");
 
         if (csd == -1) {
                 *log = log500Msg("Socket accept failed.");
                 /* No message receivable, nothing to respond to. */
+                /* No open socket to close, no buffers or structs to free. */
                 return;
         }
 
         debug("READ");
 
         /* Read message sent by client upon connection. */
-        r = read(csd, recvbuf, sizeof recvbuf);
+        r = read(csd, msgbuf, sizeof msgbuf);
 
-        if (r == -1) {
-                /* No message recieved, 500 response possible. */
-                respPtr = constructResponse(500, "Socket read failed.", 19);
-                *log = log500Msg("Socket read failed\n");
-        } else if (r == 0) {
-                /* No message recieved, no response possible.
-                 * Close socket and return.
-                 */
+        if (r == 0) {
+                /* Client hung up. No message recieved, no response possible. */
+                /* No request struct or message/response buffer to free. */
+                /* Close socket and return. */
                 close(csd);
                 *log = log500Msg("Client hung up\n");
                 return;
+        } else if (r == -1) {
+                /* Read failure. No message recieved, 500 response possible. */
+                /* No request struct or message buffer to free. */
+                /* Client socket and response buffer must be closed/freed. */
+                respPtr = constructResponse(500, "Socket read failed.", 19);
+                *log = log500Msg("Socket read failed\n");
         } else {
+                /* Message recieved.  (Expected control flow.) */
+                /* Eventually, client socket must be closed, request struct, 
+                 * and message/response buffers must be freed. */
                 debug("PARSE");
 
                 /* Get request struct from received message. */
-                req = parseGet(recvbuf, r, clientAdd);
+                req = parseGet(msgbuf, r, clientAdd);
 
-                //TODO keep looking at control flow, removing as many
-                //returns as possible
-                
                 /* Examine if request was valid. */
                 if (!req->validrequest) {
                         debug("400");
@@ -501,9 +507,7 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
                         respPtr = constructResponse(400, NULL, 0);
 
                         /* Construct log and free request struct. */
-                        *log = logMsg(400, req, 0, 0);
-                        freeRequest(req);
-                        return;
+                        *log = logMsg(400, req, -1, -1);
                 } else {
                         /* Request was valid.
                          * Attempt to read file into mem at pointer msgPtr.
@@ -518,19 +522,19 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
 
                                 /* Success - construct 200 OK response. */
                                 respPtr = constructResponse(200, msgPtr, fread);
-                                //TODO log 200
+                                /* Log will be generated after write. */
                         } else if (msgPtr == ERR403) {
                                 debug("403");
 
                                 /* No permissions - construct 403. */
                                 respPtr = constructResponse(403, NULL, 0);
-                                //TODO log 403
+                                *log = logMsg(403, req, -1, -1);
                         } else if (msgPtr == ERR404) {
                                 debug("404");
 
                                 /* No file - construct 404. */
                                 respPtr = constructResponse(404, NULL, 0);
-                                //TODO log 404
+                                *log = logMsg(404, req, -1, -1);
                         } else if (msgPtr == ERR500) {
                                 debug("500");
 
@@ -540,7 +544,12 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
                         }
                 }
         }
-        debug("SEND");
+        /* All control flow that has reached here has:
+         *  - set the log message
+         *  - built the request struct
+         *  - filled the message and response buffers
+         *  - left the socket open
+         */
 
         /* Write response to client socket. */
         sockWrite(req, csd, respPtr, log);
