@@ -39,11 +39,11 @@ typedef struct sockaddr_in saddr;
  * Any of the char * may be one of the error sentinels, ERRxxx.
  */
 typedef struct request {
-        char * address;
-        char * timestring;
-        char * requestline;
-        char * resourcepath;
-        int validrequest;
+	char * address;
+	char * timestring;
+	char * requestline;
+	char * resourcepath;
+	int validrequest;
 } request;
 
 /*
@@ -61,7 +61,7 @@ int listeningSock(serverconf conf);
  * MEMORY: Return string is malloced!
  *
  * From a time struct, returns a string of the format:
- *          Www Mmm dd hh:mm:ss yyy
+ *	  Www Mmm dd hh:mm:ss yyy
  * 
  * May return ERR500.
  */

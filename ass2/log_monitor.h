@@ -14,8 +14,8 @@
 #include <pthread.h>
 
 typedef struct safefile {
-        char * filepath;
-        pthread_mutex_t busy;
+	char * filepath;
+	pthread_mutex_t busy;
 } safefile;
 
 /*

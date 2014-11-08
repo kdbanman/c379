@@ -12,9 +12,9 @@
 #define SERVER_CONF_H_
 
 typedef struct serverconf {
-        int port;
-        char * basedir;
-        char * logloc;
+	int port;
+	char * basedir;
+	char * logloc;
 } serverconf;
 
 /*

@@ -14,10 +14,10 @@
  * Struct for passing arguments into client handler thread.
  */
 typedef struct thread_args {
-        serverconf config;
-        int clientsd;
-        saddr clientaddr;
-        safefile safeLog;
+	serverconf config;
+	int clientsd;
+	saddr clientaddr;
+	safefile safeLog;
 } thread_args;
 
 /* 
