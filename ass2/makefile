@@ -5,7 +5,7 @@
 # CMPUT 379 EA1
 # Assignment 2
 
-CC=gcc -Wall -Wextra
+CC=gcc -Wall -Wextra -lpthread
 
 all: server_f server_p
 
@@ -23,6 +23,12 @@ server_util.o: server_util.c server_util.h
 
 log_monitor.o: log_monitor.c log_monitor.h
 	$(CC) -o log_monitor.o -c log_monitor.c
+
+run_f: server_f
+	./server_f 8080 ~ ~/loggy_f
+
+run_p: server_p
+	./server_p 8080 ~ ~/loggy_p
 
 clean:
 	rm -rf *.o server_f server_p

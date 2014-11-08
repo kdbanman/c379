@@ -508,7 +508,7 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         if (csd == -1) {
                 *log = log500Msg("Socket accept failed.");
                 /* No message receivable, nothing to respond to. */
-                /* No open socket to close, no buffers or structs to free. */
+                /* No buffers or structs to free. */
                 return;
         }
 
@@ -522,19 +522,17 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         if (r == 0) {
                 /* Client hung up. No message recieved, no response possible. */
                 /* No request struct or message/response buffer to free. */
-                /* Close socket and return. */
-                close(csd);
                 *log = log500Msg("Client hung up\n");
                 return;
         } else if (r == -1) {
                 /* Read failure. No message recieved, 500 response possible. */
                 /* No request struct or message buffer to free. */
-                /* Client socket and response buffer must be closed/freed. */
+                /* Response buffer must be closed/freed. */
                 respPtr = constructResponse(500, "Socket read failed.", 19);
                 *log = log500Msg("Socket read failed\n");
         } else {
                 /* Message recieved.  (Expected control flow.) */
-                /* Eventually, client socket must be closed, request struct, 
+                /* Eventually, request struct
                  * and message/response buffers must be freed. */
                 debug("PARSE");
 
@@ -602,12 +600,11 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         if (isFreeable(respPtr)) free(respPtr);
         if (isFreeable(msgPtr)) free(msgPtr);
         freeRequest(req);
-
-        close(csd);
 }
 
 void processClient(int sd, serverconf conf, safefile * log)
 {
+        //TODO ditch this 
         char * logMsg;
         saddr clientaddr;
         socklen_t clientlen;

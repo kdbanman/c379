@@ -9,7 +9,10 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
+#include <sys/mman.h>
 #include "log_monitor.h"
 
 void safeWrite(safefile * dest, char * toWrite)
