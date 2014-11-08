@@ -9,8 +9,9 @@
 #define SERVER_ADDR     "127.0.0.1"     /* localhost */
 #define MAXBUF          4096
 
-int main()
-{   int sockfd;
+void snd(char * msg)
+{
+    int sockfd;
     struct sockaddr_in dest;
     char buffer[MAXBUF];
 
@@ -31,22 +32,30 @@ int main()
         exit(errno);
     }
 
-    /*---Connect to server---*/
     if ( connect(sockfd, (struct sockaddr*)&dest, sizeof(dest)) != 0 )
     {
         perror("Connect ");
         exit(errno);
     }
 
-    write(sockfd, "GET /rekt\n\n", 11);
-
-    /*---Get "Hello?"---*/
     bzero(buffer, MAXBUF);
+    printf("Sending:\n%s", msg);
+    write(sockfd, msg, strlen(msg));
     recv(sockfd, buffer, sizeof(buffer), 0);
-    printf("%s", buffer);
+    printf("Received:\n");
+    printf("%s\n", buffer);
 
-    /*---Clean up---*/
     close(sockfd);
+
+
+}
+
+int main()
+{
+    snd("GET /.vimrc\n\n");
+    snd("GET /rekt\n\n");
+    snd("GET /nope\n\n");
+
     return 0;
 }
 
