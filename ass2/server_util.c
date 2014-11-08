@@ -238,7 +238,7 @@ request * parseGet(char * req, int length, struct sockaddr_in address)
         sreq->timestring = currtime();
         sreq->resourcepath = getResourcePath(req);
         sreq->requestline = getRequestLine(req, length);
-        sreq->validrequest = sreq->resourcepath != NULL;
+        sreq->validrequest = sreq->resourcepath != ERR400;
 
         return sreq;
 }
@@ -332,7 +332,7 @@ int getContents(char * basePath, char * relPath, char ** contents)
         if (relPath[0] == '/') strcat(path, relPath + 1);
         else strcat(path, relPath);
 
-        debug("TEST");
+        debug("TESTFILE");
         
         /* Test if file exists and is not a device, socket, FIFO, etc. */
         if (!isRegFile(path)) {
@@ -515,7 +515,9 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         debug("READ");
 
         /* Read message sent by client upon connection. */
-        r = read(csd, msgbuf, sizeof msgbuf);
+        /* This should be a dynamic buffer realloced until memory exhaustion. */
+        /* For now, only support GET requests < 4KB. */
+        r = read(csd, msgbuf, (sizeof msgbuf) - 1);
 
         if (r == 0) {
                 /* Client hung up. No message recieved, no response possible. */
@@ -536,7 +538,8 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
                  * and message/response buffers must be freed. */
                 debug("PARSE");
 
-                /* Get request struct from received message. */
+                /* Terminate as string and get request struct from message. */
+                msgbuf[r] = '\0';
                 req = parseGet(msgbuf, r, clientAdd);
 
                 /* Examine if request was valid. */
