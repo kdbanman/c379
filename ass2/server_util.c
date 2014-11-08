@@ -8,7 +8,7 @@
  *
  */
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include <errno.h>
 #include <time.h>
@@ -600,23 +600,4 @@ void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log)
         if (isFreeable(respPtr)) free(respPtr);
         if (isFreeable(msgPtr)) free(msgPtr);
         freeRequest(req);
-}
-
-void processClient(int sd, serverconf conf, safefile * log)
-{
-        //TODO ditch this 
-        char * logMsg;
-        saddr clientaddr;
-        socklen_t clientlen;
-        int clientsd;
-
-        clientlen = sizeof(&clientaddr);
-        clientsd = accept(sd, (struct sockaddr *) &clientaddr, &clientlen);
-
-        handleRequest(conf, clientsd, clientaddr, &logMsg);
-
-        //TODO safeWrite(log, logMsg);
-        printf("%s", logMsg);
-
-        if (isFreeable(logMsg)) free(logMsg);
 }

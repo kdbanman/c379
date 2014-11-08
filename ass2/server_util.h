@@ -8,6 +8,9 @@
  *
  */
 
+#ifndef SERVER_UTIL_H
+#define SERVER_UTIL_H
+
 #include <netinet/in.h>
 #include <time.h>
 #include "server_conf.h"
@@ -193,7 +196,4 @@ char * logMsg(int code, request * req, int written, int total);
  */
 void handleRequest(serverconf conf, int csd, saddr clientAdd, char ** log);
 
-/*
- * Accept a client from a server socket, handle the request, and log the result.
- */
-void processClient(int sd, serverconf conf, safefile * log);
+#endif
