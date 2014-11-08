@@ -8,27 +8,6 @@
  *
  */
 
-TODO
-====
-
-- write pthready
-
-- put mutex init code p&f in log monitor.h
-
-- daemonize
-
-- grep for // and 4 spaces
-
-- grep for printfs and remove them or swap for logs
-    - everywhere after daemonization
-
-- if still hang up issues, just ignore them silently
-
-- test er500 cases
-
-- test malformed gets
-
-
 General Approach
 ================
 
@@ -37,7 +16,7 @@ structured listen loop.
 
 For each client connection:
     - Threaded server spawns a thread.
-        - no need to `join` later, so `detached` for automatic resource cleanup
+        - detach automatic resource cleanup
     - Forked server forks a child process
         - child processes inherit client socket fd
         - shared memory necessary to use mutex (munmap at end!)
@@ -73,16 +52,3 @@ Assumptions
     see: http://tools.ietf.org/html/rfc2616#section-4
 
 - HTTP responses need not be terminated by any particular sequence/flag
-
-
-Q & A
-=====
-
-(for Kirby's reference - do not grade based on any content below)
-
-- are there necessary cleanup steps for threads or processes?
-    - detached threads are fine
-    - munmap, catch sigchild on fork
-
-- how do i daemonize within my code?
-    with daemonize()
