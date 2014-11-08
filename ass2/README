@@ -11,24 +11,22 @@
 TODO
 ====
 
-- write forky
-
-- only 404s happen after one 404 happens...
-
 - write pthready
 
 - put mutex init code p&f in log monitor.h
+
+- daemonize
 
 - grep for // and 4 spaces
 
 - grep for printfs and remove them or swap for logs
     - everywhere after daemonization
 
-- daemonize
-
 - if still hang up issues, just ignore them silently
 
 - test er500 cases
+
+- test malformed gets
 
 
 General Approach
