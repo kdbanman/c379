@@ -81,12 +81,10 @@ typedef struct event {
 } event;
 
 /* Linked list item for concurrent events. In order of declaration:
- *  - time of each event in list
  *  - list item payload
  *  - next list item
  */
 typedef struct evt_list_struct {
-        int time;
         event * evt;
         struct evt_list_struct * next;
 } evt_list;
@@ -207,14 +205,70 @@ void print_sim(simulation * sim);
  */
 simulation * get_simulation();
 
-/********************
- * OUTPUT FUNCTIONS *
- ********************/
+/*******************
+ * EVENT FUNCTIONS *
+ *******************/
+
+/* 
+ * Appends an event for the supplied process and event code to the event list.
+ */
+void append_event(int time, process * p, evt_code code, evt_list ** evts);
+
+/*
+ * Logs a single event to stdout.
+ */
+void log_event(event * evt);
 
 /*
  * Outputs simulation time and each event in the list as a line on stdout.
  */
 void log_events(evt_list * evts);
+
+/************************
+ * SIMULATION FUNCTIONS *
+ ************************/
+
+/*
+ * Attempt to consume resources for process, return nonzero if resources
+ * could not be allocated (and are unchanged).
+ */
+int consume_resources(process * p, resources * res);
+
+/* 
+ * Release resources from process.
+ */
+void release_resources(process * p, resources * res);
+
+/*
+ * Update the process and the resources, appending events to the list as
+ * necessary.
+ */
+void update_by_process(int time, process * p, resources * res, evt_list ** evt);
+
+/*
+ * For a single simulation moment, check simulation processes and update
+ * resources and processes accordingly. Append any events to the event list.
+ *
+ * @param sim The simulation with time incremented since last update.
+ * @param evts The linked list of events.
+ */
+void update_simulation(simulation * sim, evt_list ** evts);
+
+/*
+ * Iterates through processes, returns true if none are left running.  This
+ * indicates either an unservable set of processes or all processes complete.
+ *
+ * @return Nonzero if simulation complete
+ */
+int simulation_complete(simulation * sim);
+
+/*
+ * Runs (and mutates) the simulation until at least one event occurs.
+ *
+ * @param sim The simulation to be run and mutated.
+ * @return Nonzero if the simulation is finished
+ */
+int run_simulation(simulation * sim);
 
 /*
  * Outputs simulation result to stdout.  Assumes simulation has been run to
@@ -223,15 +277,3 @@ void log_events(evt_list * evts);
  *  - One or more processes could not finish.
  */
 void log_result(simulation * sim);
-
-/************************
- * SIMULATION FUNCTIONS *
- ************************/
-
-/*
- * Runs (and mutates) the simulation until at least one event occurs.
- *
- * @param sim The simulation to be run and mutated.
- * @return The list of events, or null if the simulation cannot proceed.
- */
-evt_list * run_simulation(simulation * sim);

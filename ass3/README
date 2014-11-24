@@ -15,30 +15,18 @@ General Approach:
     - log simulation start
     - until simulation finishes:
         - run simulation until at least one event occurs
-        - log event(s)
+            - for each simulation tick
+                - keep list of events to be appended to at any point
+                - if list is empty at the end, just proceed to next tick
+        - log event(s) and status
     - log simulation result
     - log simulation end
 
 Notes and Assumptions:
     - program does not run persistently, so allocated memory will not be freed
       for the sake of performance and simplicity.
+    - more than one event can be caused by a single process for a single 
+      moment in simulation (i.e. arrive and start)
 
 TODO:
-    - in run simulation (move this to general approach)
-        - increment sim time
-        - for each process
-            - if start time is sim time or state is idle
-                - if can serve request
-                    - set to running
-                    - subtract from available resources
-                - if cannot serve request
-                    - set to idle
-                - if running and duration > 0
-                    - decrement duration
-                - if running and duration == 0
-                    - release resources
-                    - set to finished
-
-    - create the events and pop them in the queue
-
-    - print the events
+    - print system status

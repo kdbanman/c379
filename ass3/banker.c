@@ -291,11 +291,182 @@ simulation * get_simulation()
         return sim;
 }
 
+void append_event(int time, process * p, evt_code code, evt_list ** evts)
+{
+        evt_list * next, * new;
+
+        /* Create the new event list element. */
+        new = (evt_list *) malloc(sizeof (evt_list));
+        new->evt = (event *) malloc(sizeof (event));
+        new->evt->time = time;
+        new->evt->event = code;
+        new->evt->proc = p->name;
+        new->next = NULL;
+
+        /* If the list is empty, set it's head to the new element. */
+        if (*evts == NULL) {
+                *evts = new;
+        }else {
+            /* Find the end of the list. */
+            next = *evts;
+            while (next->next != NULL) next = next->next;
+            
+            /* Append the new element. */
+            next->next = new;
+        }
+
+}
+
+void log_event(event * evt)
+{
+        char * msg;
+
+        if (evt->event == ARRIVE) 
+                msg = "Process %s arrived.\n";
+        else if (evt->event == START)
+                msg = "Process %s started execution.\n";
+        else if (evt->event == FINISH)
+                msg = "Process %s finished execution.\n";
+
+        printf(msg, evt->proc);
+}
+
 void log_events(evt_list * evts)
 {
-        //STUB
-        evts = evts;
-        printf("sim doin stuff\n");
+        evt_list * next;
+        event * evt;
+
+        /* Report the time from the first event. */
+        printf("Simulation time: %d\n", evts->evt->time);
+
+        /* Iterate through the list of events. */
+        next = evts;
+        while (next != NULL) {
+                /* Get the event. */
+                evt = next->evt;
+
+                /* Log event contents. */
+                log_event(evt);
+
+                next = next->next;
+        }
+}
+
+int consume_resources(process * p, resources * res)
+{
+        int i;
+
+        /* Check if resources are consumable, return 1 if not. */
+        for (i = 0; i < res->num; i++) {
+                if (p->need[i] > res->avail[i]) return 1;
+        }
+
+        /* Subtract process needs from available resources. */
+        for (i = 0; i < res->num; i++) {
+                 res->avail[i] -= p->need[i];
+        }
+
+        return 0;
+}
+
+void release_resources(process * p, resources * res)
+{
+        int i;
+
+        /* Add process needs to available resources. */
+        for (i = 0; i < res->num; i++) {
+                 res->avail[i] += p->need[i];
+        }
+}
+
+void update_by_process(int time, process * p, resources * res, evt_list ** evts)
+{
+        if (p->start == time) {
+                /* Create and append arrival event. */
+                append_event(time, p, ARRIVE, evts);
+        }
+
+        /* Check if process is new or waiting on resources. */
+        if (p->start == time || p->state == WAITING) {
+                if (consume_resources(p, res)) {
+                        /* Resource consumption failed, tell process to wait. */
+                        p->state = WAITING;
+                } else {
+                        /* Resources allocated, set to running. */
+                        p->state = RUNNING;
+
+                        /* Create and append start event. */
+                        append_event(time, p, START, evts);
+                }
+        }
+
+        if (p->state == RUNNING) {
+                /* Check if there is remaining time left. */
+                if (p->dur > 0) {
+                        /* Process has completed an iteration, so decrement
+                         * remaining duration. */
+                        p->dur--;
+                } else {
+                        p->state = DONE;
+                        release_resources(p, res);
+                        /* Create and append finish event. */
+                        append_event(time, p, FINISH, evts);
+                }
+        }
+}
+
+void update_simulation(simulation * sim, evt_list ** evts)
+{
+        proc_list * next;
+
+        next = sim->procs;
+
+        /* Iterate through linked list of processes. */
+        while (next != NULL) {
+                /* Update according to the current process, gathering events. */
+                update_by_process(sim->time, next->proc, sim->res, evts);
+
+                /* Get the next process in the list. */
+                next = next->next;
+        }
+}
+
+int simulation_complete(simulation * sim)
+{
+        proc_list * next;
+        int done;
+
+        /* Iterate through linked list of processes. */
+        done = 1;
+        next = sim->procs;
+        while (next != NULL) {
+                /* Simulation is incomplete if any process is either:
+                 * - INERT (not yet arrived)
+                 * - RUNNING
+                 */
+                if (next->proc->state == INERT ||
+                    next->proc->state == RUNNING) done = 0;
+
+                next = next->next;
+        }
+
+        return done;
+}
+
+int run_simulation(simulation * sim)
+{
+        evt_list * evts;
+
+        /* Run simulation until events are encountered. */
+        evts = NULL;
+        while (evts == NULL) {
+            update_simulation(sim, &evts);
+            sim->time++;
+        }
+
+        log_events(evts);
+
+        return simulation_complete(sim);
 }
 
 void log_result(simulation * sim)
@@ -305,32 +476,20 @@ void log_result(simulation * sim)
         printf("sim did stuff\n");
 }
 
-evt_list * run_simulation(simulation * sim)
-{
-        evt_list * head;
-
-        //STUB
-        sim = sim;
-        head = NULL;
-
-        return head;
-}
-
 int main()
 {
         simulation * sim;
-        evt_list * evts;
+        int done;
 
         /* Gather and verify input from user. */
         sim = get_simulation();
 
         printf("Simulation start.\n");
 
-        /* Run simulation and output simulation events. */
-        evts = run_simulation(sim);
-        while (evts != NULL) {
-                log_events(evts);
-                evts = run_simulation(sim);
+        /* Run simulation. */
+        done = 0;
+        while (!done) {
+                done = run_simulation(sim);
         }
 
         /* Output simulation results. */
