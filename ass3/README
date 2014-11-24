@@ -1,0 +1,26 @@
+
+/*
+ * Kirby Banman
+ * 1173895
+ *
+ * CMPUT 379 EA1
+ * Assignment 3
+ *
+ */
+
+General Approach:
+    - get simulated system configuration
+    - get simulated process data
+    - log simulation start
+    - until simulation finishes:
+        - run simulation until at least one event occurs
+        - log event(s)
+    - log simulation result
+    - log simulation end
+
+Notes and Assumptions:
+    - program does not run persistently, so allocated memory will not be freed
+      for the sake of performance and simplicity.
+
+TODO:
+    - prototype and stub functions for getting config
