@@ -11,7 +11,7 @@
 #ifndef BANKER_H_
 #define BANKER_H_
 
-#define DEBUG 1
+#define DEBUG 0
 
 /******************
  *                *
@@ -51,6 +51,7 @@ typedef struct process {
         int * need;
         int start;
         int dur;
+        int remaining;
         proc_state state;
 } process;
 
@@ -223,6 +224,16 @@ void log_event(event * evt);
  * Outputs simulation time and each event in the list as a line on stdout.
  */
 void log_events(evt_list * evts);
+
+/*
+ * Logs a single process state to stdout.
+ */
+void log_process(process * proc);
+
+/* 
+ * Outputs simulation process status to stdout.
+ */
+void log_processes(proc_list * procs);
 
 /************************
  * SIMULATION FUNCTIONS *

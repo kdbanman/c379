@@ -66,6 +66,7 @@ process * get_process(int num, resources * res)
         proc = (process *) malloc(sizeof (process));
         proc->start = -1;
         proc->dur = -1;
+        proc->remaining = -1;
         proc->state = INERT;
 
         /* Until valid input is given, ask for details of process. */
@@ -88,6 +89,7 @@ process * get_process(int num, resources * res)
 
                 msg = "Details of process %d (name needs start duration): ";
         }
+        proc->remaining = proc->dur;
 
         return proc;
 }
@@ -246,47 +248,16 @@ resources * get_resources()
         return res;
 }
 
-void print_sim(simulation * sim)
-{
-        int i;
-        resources * res;
-        proc_list * next_p;
-        process * proc;
-        
-        printf("\n Resource,Max,Available\n");
-        res = sim->res;
-        for (i = 0; i < res->num; i++) {
-                printf("%10s %3d %3d\n", res->name[i],
-                                         res->max[i],
-                                         res->avail[i]);
-        }
-
-        printf("\n Process,Requires,Start,Duration,State\n");
-        next_p = sim->procs;
-        while (next_p != NULL) {
-                proc = next_p->proc;
-
-                printf("%5s   :", proc->name);
-                for (i = 0; i < res->num; i++) {
-                        printf("%02d:", proc->need[i]);
-                }
-                printf("  %3d %3d  %2d\n", proc->start, proc->dur, proc->state);
-
-                next_p = next_p->next;
-        }
-}
-
 simulation * get_simulation()
 {
         simulation * sim;
 
         sim = (simulation *) malloc(sizeof (simulation));
 
+        /* Read simulation config from stdin. */
         sim->time = 0;
         sim->res = get_resources();
         sim->procs = get_process_list(sim->res);
-
-        if (DEBUG) print_sim(sim);
 
         return sim;
 }
@@ -337,7 +308,7 @@ void log_events(evt_list * evts)
         event * evt;
 
         /* Report the time from the first event. */
-        printf("Simulation time: %d\n", evts->evt->time);
+        printf("\nSimulation time: %d\n", evts->evt->time);
 
         /* Iterate through the list of events. */
         next = evts;
@@ -348,6 +319,31 @@ void log_events(evt_list * evts)
                 /* Log event contents. */
                 log_event(evt);
 
+                next = next->next;
+        }
+}
+
+void log_process(process * proc)
+{
+        char * msg;
+
+        /* If process is running, but has just arrived, do not log. */
+        if (proc->state == RUNNING && proc->dur != proc->remaining + 1) {
+                printf("Process %s is running.\n", proc->name);
+        } else if (proc->state == WAITING) {
+                printf("Process %s is waiting for resources.\n", proc->name);
+        }
+
+}
+
+void log_processes(proc_list * procs)
+{
+        proc_list * next;
+
+        /* Iterate through process list. */
+        next = procs;
+        while (next != NULL) {
+                log_process(next->proc);
                 next = next->next;
         }
 }
@@ -402,10 +398,10 @@ void update_by_process(int time, process * p, resources * res, evt_list ** evts)
 
         if (p->state == RUNNING) {
                 /* Check if there is remaining time left. */
-                if (p->dur > 0) {
+                if (p->remaining > 0) {
                         /* Process has completed an iteration, so decrement
                          * remaining duration. */
-                        p->dur--;
+                        p->remaining--;
                 } else {
                         p->state = DONE;
                         release_resources(p, res);
@@ -465,15 +461,34 @@ int run_simulation(simulation * sim)
         }
 
         log_events(evts);
+        log_processes(sim->procs);
 
         return simulation_complete(sim);
 }
 
 void log_result(simulation * sim)
 {
-        //STUB
-        sim = sim;
-        printf("sim did stuff\n");
+        proc_list * next;
+        int waiting;
+        char * msg;
+
+        printf("\nNo process running.\n");
+
+        /* Iterate through process list to find any waiting process. */
+        next = sim->procs;
+        waiting = 0;
+        while (next != NULL) {
+                if (next->proc->state == WAITING) waiting = 1;
+                next = next->next;
+        }
+
+        if (waiting) {
+                msg = "Process(es) waiting.\n"
+                      "Insufficient resources to avoid deadlocks.\n";
+        } else 
+                msg = "All processes finished.\n";
+        
+        printf("%sSystem halted.\n", msg);
 }
 
 int main()
@@ -484,7 +499,9 @@ int main()
         /* Gather and verify input from user. */
         sim = get_simulation();
 
-        printf("Simulation start.\n");
+        printf("\n\nSimulation time: 0\n");
+        printf("Simulation started.\n");
+        printf("No process is available.\n");
 
         /* Run simulation. */
         done = 0;
@@ -495,7 +512,7 @@ int main()
         /* Output simulation results. */
         log_result(sim);
 
-        printf("Simulation end.\n");
+        printf("Simulation end.\n\n");
 
         return 0;
 }

@@ -23,10 +23,7 @@ General Approach:
     - log simulation end
 
 Notes and Assumptions:
+    - for a given simulation time, order of event and status output lines does
+      not matter (as long as the information is accurrate).
     - program does not run persistently, so allocated memory will not be freed
       for the sake of performance and simplicity.
-    - more than one event can be caused by a single process for a single 
-      moment in simulation (i.e. arrive and start)
-
-TODO:
-    - print system status
