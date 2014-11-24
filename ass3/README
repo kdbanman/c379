@@ -9,8 +9,9 @@
  */
 
 General Approach:
-    - get simulated system configuration
-    - get simulated process data
+    - get simulated system configuration and process data
+        - for each line of input taken, input must be completely validated
+          against specification and against already taken input
     - log simulation start
     - until simulation finishes:
         - run simulation until at least one event occurs
@@ -23,4 +24,3 @@ Notes and Assumptions:
       for the sake of performance and simplicity.
 
 TODO:
-    - prototype and stub functions for getting config

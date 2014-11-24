@@ -115,6 +115,67 @@ typedef struct simulation {
  ********************/
 
 /*
+ * Purge stdin of previous entry, if it exists.
+ *
+ * @return The number of non-whitespace characters left in stdin.
+ */
+int in_purge();
+
+/*
+ * From stdin, get the details of a single process.  Returns only after valid
+ * input.  Input is validated against the resources parameter.
+ *
+ * @param num The process number.
+ * @param res The simulation resources.
+ * @return A valid process struct.
+ */
+process * get_process(int num, resources * res);
+
+/*
+ * From stdin, get the number of processes.  Asks repeatedly until >= 1.
+ */
+int get_num_processes();
+
+/*
+ * From stdin, get the number of processes, as well as the properties of each
+ * process.  Returns only after sufficient valid input given.  Input is 
+ * validated against the resources structure parameter.
+ *
+ * @param res The simulation system resources
+ * @return The list of processes.
+ */
+proc_list * get_process_list(resources * res);
+
+/*
+ * From stdin, get the number of types of system resourcs.  Must be >= 1.
+ */
+int get_num_resources();
+
+/*
+ * From stdin, get the name of each resource type.  Must match the number of
+ * resource types.
+ *
+ * @param num_res The number of resource types.
+ */
+char ** get_resource_names(int num_res);
+
+/*
+ * From stdin, get the number of each resource type.  Must match the number of
+ * resource types.
+ *
+ * @param num_res The number of resource types.
+ */
+int * get_max_resources(int num_res);
+
+/*
+ * From stdin, get the number, names, and amounts of simulation system
+ * resources.  Returns only after sufficient valid input given.
+ *
+ * @return The resources struct
+ */
+resources * get_resources();
+
+/*
  * Propmts users to input simulation data from stdin, verifying correctness
  * and consistency.  If incorrect or inconsistent input is supplied, the user
  * is notified and the program continues if possible.
