@@ -11,6 +11,8 @@
 #ifndef BANKER_H_
 #define BANKER_H_
 
+#define DEBUG 1
+
 /******************
  *                *
  *  DATA SECTION  *
@@ -122,6 +124,22 @@ typedef struct simulation {
 int in_purge();
 
 /*
+ * From stdin, read the name from a process detail input report, trimming
+ * all whitespace.
+ */
+char * get_process_name();
+
+/*
+ * From stdin, read the process resource requirements, validating them
+ * against the max available in the resources parameter.  Returns NULL if
+ * any resource needs are < 0 or > max
+ *
+ * @param res The max system resources.
+ * @return The array of resource requirements or NULL.
+ */
+int * get_process_needs();
+
+/*
  * From stdin, get the details of a single process.  Returns only after valid
  * input.  Input is validated against the resources parameter.
  *
@@ -174,6 +192,11 @@ int * get_max_resources(int num_res);
  * @return The resources struct
  */
 resources * get_resources();
+
+/* 
+ * Prints the data for a simulation struct.
+ */
+void print_sim(simulation * sim);
 
 /*
  * Propmts users to input simulation data from stdin, verifying correctness

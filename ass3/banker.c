@@ -23,20 +23,71 @@ int in_purge()
         scanf("%[^\n]%*c", overrun);
 
         /* Trim leading whitespace from buffer and return remaining length. */
-        while(isspace(*overrun)) overrun++;
+        while (isspace(*overrun)) overrun++;
         return (int) strlen(overrun);
+}
+
+char * get_process_name()
+{
+        char * name;
+
+        /* Read up to whitespace. */
+        name = (char *) malloc(255 * sizeof (char));
+        scanf("%s ", name);
+
+        /* Trim leading whitespace. */
+        while (isspace(*name)) name++;
+        return name;
+}
+
+int * get_process_needs(resources * res)
+{
+        int i, * need;
+
+        need = (int *) malloc(res->num * sizeof(int));
+
+        /* Attempt to read the appropriate number of integers. */
+        for (i = 0; i < res->num; i++) {
+                need[i] = -1;
+                scanf("%d ", &need[i]);
+
+                if (need[i] < 0 || need[i] > res->max[i]) return NULL;
+        }
+
+        return need;
 }
 
 process * get_process(int num, resources * res)
 {
         process * proc;
+        int valid;
+        char * msg;
 
-        //STUB
-        num=num;
-        res=res;
         proc = (process *) malloc(sizeof (process));
+        proc->start = -1;
+        proc->dur = -1;
+        proc->state = INERT;
 
         /* Until valid input is given, ask for details of process. */
+        msg = "Details of process %d: ";
+        valid = 0;
+        while (!valid) {
+                printf(msg, num);
+                proc->name = get_process_name();
+                proc->need = get_process_needs(res);
+                scanf("%d ", &(proc->start));
+                scanf("%d", &(proc->dur));
+
+                /* If purge is not empty, set erroneous value. */
+                if (in_purge()) proc->dur = -1;
+
+                /* If any values are set erroneously, do not set valid flag. */
+                if (proc->need != NULL &&
+                    proc->start >= 0 &&
+                    proc->dur > 0) valid = 1;
+
+                msg = "Details of process %d (name needs start duration): ";
+        }
 
         return proc;
 }
@@ -158,6 +209,8 @@ int * get_max_resources(int num_res)
                         scanf("%d ", &max[i]);
                 }
                 scanf("%d", &max[i]);
+
+                /* If nonempty purge, set erroneous value. */
                 if (in_purge()) max[0] = -1;
 
                 /* If all elements are set properly, set "valid" flag. */
@@ -193,6 +246,36 @@ resources * get_resources()
         return res;
 }
 
+void print_sim(simulation * sim)
+{
+        int i;
+        resources * res;
+        proc_list * next_p;
+        process * proc;
+        
+        printf("\n Resource,Max,Available\n");
+        res = sim->res;
+        for (i = 0; i < res->num; i++) {
+                printf("%10s %3d %3d\n", res->name[i],
+                                         res->max[i],
+                                         res->avail[i]);
+        }
+
+        printf("\n Process,Requires,Start,Duration,State\n");
+        next_p = sim->procs;
+        while (next_p != NULL) {
+                proc = next_p->proc;
+
+                printf("%5s   :", proc->name);
+                for (i = 0; i < res->num; i++) {
+                        printf("%02d:", proc->need[i]);
+                }
+                printf("  %3d %3d  %2d\n", proc->start, proc->dur, proc->state);
+
+                next_p = next_p->next;
+        }
+}
+
 simulation * get_simulation()
 {
         simulation * sim;
@@ -202,6 +285,8 @@ simulation * get_simulation()
         sim->time = 0;
         sim->res = get_resources();
         sim->procs = get_process_list(sim->res);
+
+        if (DEBUG) print_sim(sim);
 
         return sim;
 }
