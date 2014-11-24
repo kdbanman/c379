@@ -24,3 +24,21 @@ Notes and Assumptions:
       for the sake of performance and simplicity.
 
 TODO:
+    - in run simulation (move this to general approach)
+        - increment sim time
+        - for each process
+            - if start time is sim time or state is idle
+                - if can serve request
+                    - set to running
+                    - subtract from available resources
+                - if cannot serve request
+                    - set to idle
+                - if running and duration > 0
+                    - decrement duration
+                - if running and duration == 0
+                    - release resources
+                    - set to finished
+
+    - create the events and pop them in the queue
+
+    - print the events
