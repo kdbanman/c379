@@ -104,7 +104,7 @@ int get_num_processes()
         msg = "Number of processes: ";
         num = -1;
         while (num <= 0) {
-                printf(msg);
+                printf("%s", msg);
                 scanf("%d", &num);
                 if (in_purge()) num = 0;
                 msg = "Number of processes (integer >= 1): ";
@@ -157,7 +157,7 @@ int get_num_resources()
         msg = "Number of resource types: ";
         num = -1;
         while (num <= 0) {
-                printf(msg);
+                printf("%s", msg);
                 scanf("%d", &num);
                 if (in_purge()) num = 0;
                 msg = "Number of resource types (integer >= 1): ";
@@ -325,8 +325,6 @@ void log_events(evt_list * evts)
 
 void log_process(process * proc)
 {
-        char * msg;
-
         /* If process is running, but has just arrived, do not log. */
         if (proc->state == RUNNING && proc->dur != proc->remaining + 1) {
                 printf("Process %s is running.\n", proc->name);
