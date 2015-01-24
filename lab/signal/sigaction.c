@@ -28,7 +28,7 @@ int main()
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
 
-    sigaction(SIGINT, &act, 0);
+    sigaction(SIGSEGV, &act, 0);
 
     err = false;
 
@@ -41,16 +41,17 @@ int main()
     {
         i++;
 
-        /* cause segfault every third iteration*/
-        if (i % 3 == 0) {
-            printf("raising signal\n");
-            raise(SIGINT);
-        }
-
-        printf("%d\n", i);
+        if (err) printf("err!!\n");
+        else printf("noerr\n");
 
         err = false;
 
         sleep(1);
+
+        /* cause segfault every third iteration*/
+        if (i % 3 == 0) {
+            printf("raising signal\n");
+            raise(SIGSEGV);
+        }
     }
 }
