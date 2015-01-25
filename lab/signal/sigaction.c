@@ -5,52 +5,58 @@
 
 typedef enum { false, true } bool;
 
-bool err;
-
 jmp_buf env;
 
 void handler(int sig)
 {
-    printf("signal received: %d\n", sig);
-    err = true;
-
+    printf("in handler\n");
+    int i = 1000000000;
+    while (i > 0) {
+        if (i % 100000000 == 0) printf("%d\n", i / 100000000);
+        i--;
+    }
+    printf("leaving handler\n");
     siglongjmp(env, 1);
-    
-    printf("here\n");
 }
 
 int main()
 {
-    /* config and register segfault handler */
     struct sigaction act;
+    bool signal_raised;
+    int loop_number;
     
+    /* set segfault handler */
     act.sa_handler = handler;
-    sigemptyset(&act.sa_mask);
+
+    /* make handler uninterruptible */
+    sigfillset(&act.sa_mask);
     act.sa_flags = 0;
 
+    /* register segfault handler */
     sigaction(SIGSEGV, &act, 0);
 
-    err = false;
+    loop_number = 0;
 
+    /* set reentry point from handler */
     sigsetjmp(env, 1);
 
-    printf("post setjmp\n");
+    printf("entering while(1) loop\n");
 
-    int i = 0;
+    signal_raised = false;
     while (1)
     {
-        i++;
+        loop_number++;
 
-        if (err) printf("err!!\n");
-        else printf("noerr\n");
+        printf("loop number %d\n", loop_number);
 
-        err = false;
+        if (signal_raised) printf("signal raise detected\n");
 
         sleep(1);
 
         /* cause segfault every third iteration*/
-        if (i % 3 == 0) {
+        if (loop_number % 3 == 0) {
             printf("raising signal\n");
+            signal_raised = true;
             raise(SIGSEGV);
         }
     }
