@@ -1,4 +1,4 @@
-# c379
+# simpleC
 Fairly simple, early experiments in C
 
  - **ass1**: A comprehensive memory space mapper.
